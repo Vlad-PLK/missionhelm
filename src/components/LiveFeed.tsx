@@ -9,53 +9,108 @@ import { formatDistanceToNow } from 'date-fns';
 type FeedFilter = 'all' | 'tasks' | 'agents';
 
 interface LiveFeedProps {
-  mobileMode?: boolean;
-  isPortrait?: boolean;
+  mobile?: boolean;
 }
 
-export function LiveFeed({ mobileMode = false, isPortrait = true }: LiveFeedProps) {
+export function LiveFeed({ mobile = false }: LiveFeedProps) {
   const { events } = useMissionControl();
   const [filter, setFilter] = useState<FeedFilter>('all');
   const [isMinimized, setIsMinimized] = useState(false);
 
-  const effectiveMinimized = mobileMode ? false : isMinimized;
   const toggleMinimize = () => setIsMinimized(!isMinimized);
 
   const filteredEvents = events.filter((event) => {
     if (filter === 'all') return true;
-    if (filter === 'tasks') return ['task_created', 'task_assigned', 'task_status_changed', 'task_completed'].includes(event.type);
-    if (filter === 'agents') return ['agent_joined', 'agent_status_changed', 'message_sent'].includes(event.type);
+    if (filter === 'tasks')
+      return ['task_created', 'task_assigned', 'task_status_changed', 'task_completed'].includes(
+        event.type
+      );
+    if (filter === 'agents')
+      return ['agent_joined', 'agent_status_changed', 'message_sent'].includes(event.type);
     return true;
   });
 
+  const getEventIcon = (type: string) => {
+    switch (type) {
+      case 'task_created':
+        return '📋';
+      case 'task_assigned':
+        return '👤';
+      case 'task_status_changed':
+        return '🔄';
+      case 'task_completed':
+        return '✅';
+      case 'message_sent':
+        return '💬';
+      case 'agent_joined':
+        return '🎉';
+      case 'agent_status_changed':
+        return '🔔';
+      case 'system':
+        return '⚙️';
+      default:
+        return '📌';
+    }
+  };
+
+  const getEventColor = (type: string) => {
+    switch (type) {
+      case 'task_completed':
+        return 'text-mc-accent-green';
+      case 'task_created':
+        return 'text-mc-accent-pink';
+      case 'task_assigned':
+        return 'text-mc-accent-yellow';
+      case 'message_sent':
+        return 'text-mc-accent';
+      case 'agent_joined':
+        return 'text-mc-accent-cyan';
+      default:
+        return 'text-mc-text-secondary';
+    }
+  };
+
   return (
     <aside
-      className={`bg-mc-bg-secondary ${mobileMode ? 'border border-mc-border rounded-lg h-full' : 'border-l border-mc-border'} flex flex-col transition-all duration-300 ease-in-out ${
-        effectiveMinimized ? 'w-12' : mobileMode ? 'w-full' : 'w-80'
-      }`}
+      className={mobile
+        ? 'h-full w-full bg-mc-bg-secondary flex flex-col'
+        : `bg-mc-bg-secondary border-l border-mc-border flex flex-col transition-all duration-300 ease-in-out ${
+            isMinimized ? 'w-12' : 'w-64 lg:w-80'
+          }`
+      }
     >
-      <div className="p-3 border-b border-mc-border">
+      {/* Header */}
+      <div className="p-2 lg:p-3 border-b border-mc-border">
         <div className="flex items-center">
-          {!mobileMode && (
+          {!mobile && (
             <button
               onClick={toggleMinimize}
-              className="p-1 rounded hover:bg-mc-bg-tertiary text-mc-text-secondary hover:text-mc-text transition-colors"
-              aria-label={effectiveMinimized ? 'Expand feed' : 'Minimize feed'}
+              className="p-1 min-h-[44px] min-w-[44px] flex items-center justify-center rounded hover:bg-mc-bg-tertiary text-mc-text-secondary hover:text-mc-text transition-colors"
+              aria-label={isMinimized ? 'Expand feed' : 'Minimize feed'}
             >
-              {effectiveMinimized ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              {isMinimized ? (
+                <ChevronLeft className="w-4 h-4" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
+              )}
             </button>
           )}
-          {!effectiveMinimized && <span className="text-sm font-medium uppercase tracking-wider">Live Feed</span>}
+          {(!isMinimized || mobile) && (
+            <span className="text-sm font-medium uppercase tracking-wider">Live Feed</span>
+          )}
         </div>
 
-        {!effectiveMinimized && (
-          <div className={`mt-3 ${mobileMode && isPortrait ? 'grid grid-cols-3 gap-2' : 'flex gap-1'}`}>
+        {/* Filter Tabs */}
+        {(!isMinimized || mobile) && (
+          <div className="flex gap-1 mt-2 lg:mt-3">
             {(['all', 'tasks', 'agents'] as FeedFilter[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setFilter(tab)}
-                className={`min-h-11 text-xs rounded uppercase ${mobileMode && isPortrait ? 'px-1' : 'px-3'} ${
-                  filter === tab ? 'bg-mc-accent text-mc-bg font-medium' : 'text-mc-text-secondary hover:bg-mc-bg-tertiary'
+                className={`px-2 lg:px-3 py-1 text-xs rounded uppercase ${
+                  filter === tab
+                    ? 'bg-mc-accent text-mc-bg font-medium'
+                    : 'text-mc-text-secondary hover:bg-mc-bg-tertiary'
                 }`}
               >
                 {tab}
@@ -65,12 +120,17 @@ export function LiveFeed({ mobileMode = false, isPortrait = true }: LiveFeedProp
         )}
       </div>
 
-      {!effectiveMinimized && (
-        <div className="flex-1 overflow-y-auto p-2 space-y-1 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+      {/* Events List */}
+      {(!isMinimized || mobile) && (
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {filteredEvents.length === 0 ? (
-            <div className="text-center py-8 text-mc-text-secondary text-sm">No events yet</div>
+            <div className="text-center py-8 text-mc-text-secondary text-sm">
+              No events yet
+            </div>
           ) : (
-            filteredEvents.map((event) => <EventItem key={event.id} event={event} />)
+            filteredEvents.map((event) => (
+              <EventItem key={event.id} event={event} />
+            ))
           )}
         </div>
       )}
@@ -108,13 +168,17 @@ function EventItem({ event }: { event: Event }) {
   return (
     <div
       className={`p-2 rounded border-l-2 animate-slide-in ${
-        isHighlight ? 'bg-mc-bg-tertiary border-mc-accent-pink' : 'bg-transparent border-transparent hover:bg-mc-bg-tertiary'
+        isHighlight
+          ? 'bg-mc-bg-tertiary border-mc-accent-pink'
+          : 'bg-transparent border-transparent hover:bg-mc-bg-tertiary'
       }`}
     >
       <div className="flex items-start gap-2">
         <span className="text-sm">{getEventIcon(event.type)}</span>
         <div className="flex-1 min-w-0">
-          <p className={`text-sm ${isTaskEvent ? 'text-mc-accent-pink' : 'text-mc-text'}`}>{event.message}</p>
+          <p className={`text-sm ${isTaskEvent ? 'text-mc-accent-pink' : 'text-mc-text'}`}>
+            {event.message}
+          </p>
           <div className="flex items-center gap-1 mt-1 text-xs text-mc-text-secondary">
             <Clock className="w-3 h-3" />
             {formatDistanceToNow(new Date(event.created_at), { addSuffix: true })}
