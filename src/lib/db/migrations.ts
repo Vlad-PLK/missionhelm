@@ -230,6 +230,76 @@ const migrations: Migration[] = [
         console.log('[Migration 009] Added session_key_prefix to agents');
       }
     }
+  },
+  {
+    id: '010',
+    name: 'add_task_type_and_hours',
+    up: (db) => {
+      console.log('[Migration 010] Adding task_type and hours to tasks...');
+
+      const tasksInfo = db.prepare("PRAGMA table_info(tasks)").all() as { name: string }[];
+
+      // Add task_type column
+      if (!tasksInfo.some(col => col.name === 'task_type')) {
+        db.exec(`ALTER TABLE tasks ADD COLUMN task_type TEXT DEFAULT 'general'`);
+        console.log('[Migration 010] Added task_type to tasks');
+      }
+
+      // Add estimated_hours column
+      if (!tasksInfo.some(col => col.name === 'estimated_hours')) {
+        db.exec(`ALTER TABLE tasks ADD COLUMN estimated_hours REAL`);
+        console.log('[Migration 010] Added estimated_hours to tasks');
+      }
+
+      // Add actual_hours column
+      if (!tasksInfo.some(col => col.name === 'actual_hours')) {
+        db.exec(`ALTER TABLE tasks ADD COLUMN actual_hours REAL`);
+        console.log('[Migration 010] Added actual_hours to tasks');
+      }
+    }
+  },
+  {
+    id: '011',
+    name: 'add_task_milestones',
+    up: (db) => {
+      console.log('[Migration 011] Creating task_milestones and task_progress tables...');
+
+      // Create task_milestones table
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS task_milestones (
+          id TEXT PRIMARY KEY,
+          task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+          title TEXT NOT NULL,
+          description TEXT,
+          status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'blocked')),
+          phase TEXT NOT NULL,
+          order_index INTEGER DEFAULT 0,
+          completed_at TEXT,
+          completed_by_agent_id TEXT REFERENCES agents(id),
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now'))
+        );
+      `);
+
+      // Create task_progress table
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS task_progress (
+          id TEXT PRIMARY KEY,
+          task_id TEXT NOT NULL UNIQUE REFERENCES tasks(id) ON DELETE CASCADE,
+          current_phase TEXT DEFAULT 'initiation',
+          started_at TEXT,
+          last_updated_at TEXT,
+          completed_at TEXT,
+          completion_summary TEXT
+        );
+      `);
+
+      // Create indexes
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_milestones_task ON task_milestones(task_id, order_index)`);
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_progress_task ON task_progress(task_id)`);
+
+      console.log('[Migration 011] Created task_milestones and task_progress tables');
+    }
   }
 ];
 

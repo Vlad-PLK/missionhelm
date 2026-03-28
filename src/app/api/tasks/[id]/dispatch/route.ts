@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { queryOne, queryAll, run } from '@/lib/db';
 import { getOpenClawClient } from '@/lib/openclaw/client';
 import { broadcast } from '@/lib/events';
-import { getProjectsPath, getMissionControlUrl } from '@/lib/config';
+import { buildDispatchPrompt, fetchDispatchContext } from '@/lib/prompt-templates';
 import type { Task, Agent, OpenClawSession } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -16,6 +16,8 @@ interface RouteParams {
  * 
  * Dispatches a task to its assigned agent's OpenClaw session.
  * Creates session if needed, sends task details to agent.
+ * 
+ * Uses enhanced prompt templates with OpenCode integration for coding tasks.
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
@@ -131,89 +133,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Build task message for agent
-    const priorityEmoji = {
-      low: '🔵',
-      normal: '⚪',
-      high: '🟡',
-      urgent: '🔴'
-    }[task.priority] || '⚪';
-
-    // Get project path for deliverables
-    const projectsPath = getProjectsPath();
-    const projectDir = task.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const taskProjectDir = `${projectsPath}/${projectDir}`;
-    const missionControlUrl = getMissionControlUrl();
-
-    // Parse planning_spec and planning_agents if present (stored as JSON text on the task row)
-    const rawTask = task as Task & { assigned_agent_name?: string; workspace_id: string; planning_spec?: string; planning_agents?: string };
-    let planningSpecSection = '';
-    let agentInstructionsSection = '';
-
-    if (rawTask.planning_spec) {
-      try {
-        const spec = JSON.parse(rawTask.planning_spec);
-        // planning_spec may be an object with spec_markdown, or a raw string
-        const specText = typeof spec === 'string' ? spec : (spec.spec_markdown || JSON.stringify(spec, null, 2));
-        planningSpecSection = `\n---\n**📋 PLANNING SPECIFICATION:**\n${specText}\n`;
-      } catch {
-        // If not valid JSON, treat as plain text
-        planningSpecSection = `\n---\n**📋 PLANNING SPECIFICATION:**\n${rawTask.planning_spec}\n`;
-      }
+    // Build task message using enhanced prompt templates
+    const context = fetchDispatchContext(id);
+    if (!context) {
+      return NextResponse.json(
+        { error: 'Failed to fetch dispatch context' },
+        { status: 500 }
+      );
     }
 
-    if (rawTask.planning_agents) {
-      try {
-        const agents = JSON.parse(rawTask.planning_agents);
-        if (Array.isArray(agents)) {
-          // Find instructions for this specific agent, or include all if none match
-          const myInstructions = agents.find(
-            (a: { agent_id?: string; name?: string; instructions?: string }) =>
-              a.agent_id === agent.id || a.name === agent.name
-          );
-          if (myInstructions?.instructions) {
-            agentInstructionsSection = `\n**🎯 YOUR INSTRUCTIONS:**\n${myInstructions.instructions}\n`;
-          } else {
-            // Include all agent instructions for context
-            const allInstructions = agents
-              .filter((a: { instructions?: string }) => a.instructions)
-              .map((a: { name?: string; role?: string; instructions?: string }) =>
-                `- **${a.name || a.role || 'Agent'}:** ${a.instructions}`
-              )
-              .join('\n');
-            if (allInstructions) {
-              agentInstructionsSection = `\n**🎯 AGENT INSTRUCTIONS:**\n${allInstructions}\n`;
-            }
-          }
-        }
-      } catch {
-        // Ignore malformed planning_agents JSON
-      }
-    }
-
-    const taskMessage = `${priorityEmoji} **NEW TASK ASSIGNED**
-
-**Title:** ${task.title}
-${task.description ? `**Description:** ${task.description}\n` : ''}
-**Priority:** ${task.priority.toUpperCase()}
-${task.due_date ? `**Due:** ${task.due_date}\n` : ''}
-**Task ID:** ${task.id}
-${planningSpecSection}${agentInstructionsSection}
-**OUTPUT DIRECTORY:** ${taskProjectDir}
-Create this directory and save all deliverables there.
-
-**IMPORTANT:** After completing work, you MUST call these APIs:
-1. Log activity: POST ${missionControlUrl}/api/tasks/${task.id}/activities
-   Body: {"activity_type": "completed", "message": "Description of what was done"}
-2. Register deliverable: POST ${missionControlUrl}/api/tasks/${task.id}/deliverables
-   Body: {"deliverable_type": "file", "title": "File name", "path": "${taskProjectDir}/filename.html"}
-3. Update status: PATCH ${missionControlUrl}/api/tasks/${task.id}
-   Body: {"status": "review"}
-
-When complete, reply with:
-\`TASK_COMPLETE: [brief summary of what you did]\`
-
-If you need help or clarification, ask the orchestrator.`;
+    const taskMessage = buildDispatchPrompt(context);
 
     // Send message to agent's session using chat.send
     try {
@@ -224,7 +153,7 @@ If you need help or clarification, ask the orchestrator.`;
       await client.call('chat.send', {
         sessionKey,
         message: taskMessage,
-        idempotencyKey: `dispatch-${task.id}-${Date.now()}`
+        idempotencyKey: `dispatch-${id}-${Date.now()}`
       });
 
       // Update task status to in_progress
@@ -266,7 +195,7 @@ If you need help or clarification, ask the orchestrator.`;
 
       return NextResponse.json({
         success: true,
-        task_id: task.id,
+        task_id: id,
         agent_id: agent.id,
         session_id: session.openclaw_session_id,
         message: 'Task dispatched to agent'

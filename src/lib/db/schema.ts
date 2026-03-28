@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS workspaces (
   slug TEXT NOT NULL UNIQUE,
   description TEXT,
   icon TEXT DEFAULT '📁',
+  folder_path TEXT,
   created_at TEXT DEFAULT (datetime('now')),
   updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -47,8 +48,11 @@ CREATE TABLE IF NOT EXISTS tasks (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   description TEXT,
+  task_type TEXT DEFAULT 'general' CHECK (task_type IN ('feature', 'bugfix', 'research', 'documentation', 'deployment', 'general')),
   status TEXT DEFAULT 'inbox' CHECK (status IN ('pending_dispatch', 'planning', 'inbox', 'assigned', 'in_progress', 'testing', 'review', 'done')),
   priority TEXT DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+  estimated_hours REAL,
+  actual_hours REAL,
   assigned_agent_id TEXT REFERENCES agents(id),
   created_by_agent_id TEXT REFERENCES agents(id),
   workspace_id TEXT DEFAULT 'default' REFERENCES workspaces(id),
@@ -173,6 +177,32 @@ CREATE TABLE IF NOT EXISTS task_deliverables (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Task milestones table (for intermediate task steps)
+CREATE TABLE IF NOT EXISTS task_milestones (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'blocked')),
+  phase TEXT NOT NULL,
+  order_index INTEGER DEFAULT 0,
+  completed_at TEXT,
+  completed_by_agent_id TEXT REFERENCES agents(id),
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Task progress tracking table
+CREATE TABLE IF NOT EXISTS task_progress (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL UNIQUE REFERENCES tasks(id) ON DELETE CASCADE,
+  current_phase TEXT DEFAULT 'initiation',
+  started_at TEXT,
+  last_updated_at TEXT,
+  completed_at TEXT,
+  completion_summary TEXT
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_agent_id);
@@ -185,4 +215,6 @@ CREATE INDEX IF NOT EXISTS idx_activities_task ON task_activities(task_id, creat
 CREATE INDEX IF NOT EXISTS idx_deliverables_task ON task_deliverables(task_id);
 CREATE INDEX IF NOT EXISTS idx_openclaw_sessions_task ON openclaw_sessions(task_id);
 CREATE INDEX IF NOT EXISTS idx_planning_questions_task ON planning_questions(task_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_milestones_task ON task_milestones(task_id, order_index);
+CREATE INDEX IF NOT EXISTS idx_progress_task ON task_progress(task_id);
 `;

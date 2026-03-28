@@ -6,6 +6,8 @@ export type TaskStatus = 'pending_dispatch' | 'planning' | 'inbox' | 'assigned' 
 
 export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent';
 
+export type TaskType = 'feature' | 'bugfix' | 'research' | 'documentation' | 'deployment' | 'general';
+
 export type MessageType = 'text' | 'system' | 'task_update' | 'file';
 
 export type ConversationType = 'direct' | 'group' | 'task';
@@ -58,14 +60,25 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
+  task_type?: TaskType;
   status: TaskStatus;
   priority: TaskPriority;
+  estimated_hours?: number;
+  actual_hours?: number;
   assigned_agent_id: string | null;
   created_by_agent_id: string | null;
   workspace_id: string;
   business_id: string;
   due_date?: string;
   status_reason?: string;
+  planning_spec?: string;
+  planning_agents?: string;
+  planning_session_key?: string;
+  planning_messages?: string;
+  planning_complete?: number;
+  group_id?: string;
+  parent_id?: string;
+  order_index?: number;
   created_at: string;
   updated_at: string;
   // Joined fields
@@ -123,6 +136,7 @@ export interface Workspace {
   slug: string;
   description?: string;
   icon: string;
+  folder_path?: string;
   created_at: string;
   updated_at: string;
 }
@@ -159,7 +173,30 @@ export interface OpenClawSession {
   updated_at: string;
 }
 
-export type ActivityType = 'spawned' | 'updated' | 'completed' | 'file_created' | 'status_changed';
+export type ActivityType = 'spawned' | 'updated' | 'completed' | 'file_created' | 'status_changed' | 'milestone_completed' | 'phase_changed';
+
+export interface TaskMilestone {
+  id: string;
+  task_id: string;
+  title: string;
+  description?: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'blocked';
+  phase: string;
+  order_index: number;
+  completed_at?: string;
+  completed_by_agent_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaskProgress {
+  task_id: string;
+  total_milestones: number;
+  completed_milestones: number;
+  percentage: number;
+  current_phase: string;
+  current_milestone?: TaskMilestone;
+}
 
 export interface TaskActivity {
   id: string;
@@ -256,10 +293,13 @@ export interface UpdateAgentRequest extends Partial<CreateAgentRequest> {
 export interface CreateTaskRequest {
   title: string;
   description?: string;
+  task_type?: TaskType;
   priority?: TaskPriority;
+  estimated_hours?: number;
   assigned_agent_id?: string;
   created_by_agent_id?: string;
   business_id?: string;
+  workspace_id?: string;
   due_date?: string;
 }
 
