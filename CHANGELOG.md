@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.0] - 2026-04-21
+
+### Added
+- **Repo-Aware Dispatch** — Workspaces can now store a `folder_path` so coding tasks can target an existing repository instead of a generated project folder.
+- **Task Milestones** — Added milestone and progress APIs for tracking intermediate phases on a task.
+- **Workspace Delete Preview** — New `GET /api/workspaces/[id]/delete-preview` endpoint exposes dependency counts and warnings before destructive actions.
+- **Workspace Folder Path API** — New `GET/PATCH /api/workspaces/[id]/folder-path` endpoint for reading and updating repository paths cleanly.
+
+### Changed
+- **Dispatch Prompt Refactor** — Task dispatch now uses a shared prompt builder with planning context, deliverables, and repo-aware OpenCode instructions.
+- **OpenCode Dispatch Model** — Coding-task prompt templates now target `openai/gpt-5.4`.
+- **Workspace Deletion Flow** — Deletion now uses a shared preview/delete engine with protected workspace enforcement and safer agent/session retention handling.
+
+### Fixed
+- **Import Agent Modal Crash** — Gateway agent discovery/import now normalizes model payloads so object-shaped model metadata no longer crashes the frontend.
+- **Safer Dispatch Commands** — OpenCode command examples now use safer shell quoting and heredoc-style prompts to avoid broken commands from spaces or prompt content.
+- **Milestone Progress Consistency** — Milestone updates and deletions now keep `task_progress` in sync and clear stale completion timestamps when milestones are reopened.
+
+---
+
 ## [1.3.0] - 2026-03-02
 
 ### Added
@@ -169,6 +189,7 @@ This is the first stable, tested, and working release of Mission Control.
 
 ---
 
+[1.4.0]: https://github.com/crshdn/mission-control/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/crshdn/mission-control/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/crshdn/mission-control/releases/tag/v1.2.0
 [1.1.0]: https://github.com/crshdn/mission-control/releases/tag/v1.1.0
