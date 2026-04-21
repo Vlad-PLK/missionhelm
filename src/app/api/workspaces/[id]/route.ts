@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
+import { deleteWorkspaceById, PROTECTED_WORKSPACE_SLUGS } from '@/lib/workspace-deletion';
 
 export const dynamic = 'force-dynamic';
 // GET /api/workspaces/[id] - Get a single workspace
@@ -63,7 +64,6 @@ export async function PATCH(
       updates.push('icon = ?');
       values.push(icon);
     }
-    
     if (updates.length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
@@ -93,101 +93,27 @@ export async function DELETE(
   try {
     const db = getDb();
     
-    // Don't allow deleting the default workspace
-    if (id === 'default') {
-      return NextResponse.json({ error: 'Cannot delete the default workspace' }, { status: 400 });
-    }
-    
     // Check workspace exists
-    const existing = db.prepare('SELECT * FROM workspaces WHERE id = ?').get(id);
+    const existing = db.prepare('SELECT * FROM workspaces WHERE id = ?').get(id) as { slug?: string } | undefined;
     if (!existing) {
       return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
     }
+
+    if (id === 'default' || (existing.slug && PROTECTED_WORKSPACE_SLUGS.has(existing.slug))) {
+      return NextResponse.json({ error: 'This workspace is protected and cannot be deleted' }, { status: 400 });
+    }
     
     // Get counts for response
-    const taskCount = db.prepare(
-      'SELECT COUNT(*) as count FROM tasks WHERE workspace_id = ?'
-    ).get(id) as { count: number };
-    
-    const agentCount = db.prepare(
-      'SELECT COUNT(*) as count FROM agents WHERE workspace_id = ?'
-    ).get(id) as { count: number };
-    
-    // Cascade delete in proper order (handles all related data)
-    
-    // Use transaction for atomicity
-    const deleteWorkspace = db.transaction(() => {
-      // 1. Get task and agent IDs first
-      const taskIds = (db.prepare('SELECT id FROM tasks WHERE workspace_id = ?').all(id) as { id: string }[]).map(t => t.id);
-      const agentIds = (db.prepare('SELECT id FROM agents WHERE workspace_id = ?').all(id) as { id: string }[]).map(a => a.id);
-      
-      // 2. End/cancel OpenClaw sessions for agents in this workspace
-      db.prepare(`
-        UPDATE openclaw_sessions 
-        SET status = 'ended', ended_at = datetime('now') 
-        WHERE agent_id IN (SELECT id FROM agents WHERE workspace_id = ?)
-      `).run(id);
-      
-      // 3. Delete messages from agents in this workspace
-      if (agentIds.length > 0) {
-        db.prepare(`DELETE FROM messages WHERE sender_agent_id IN (${agentIds.map(() => '?').join(',')})`).run(...agentIds);
-      }
-      
-      // 4. Delete events related to tasks and agents in this workspace
-      if (taskIds.length > 0) {
-        db.prepare('DELETE FROM events WHERE task_id IN (SELECT id FROM tasks WHERE workspace_id = ?)').run(id);
-      }
-      if (agentIds.length > 0) {
-        db.prepare('DELETE FROM events WHERE agent_id IN (SELECT id FROM agents WHERE workspace_id = ?)').run(id);
-      }
-      
-      // 5. Delete task activities
-      if (taskIds.length > 0) {
-        db.prepare('DELETE FROM task_activities WHERE task_id IN (SELECT id FROM tasks WHERE workspace_id = ?)').run(id);
-      }
-      
-      // 6. Delete task deliverables
-      if (taskIds.length > 0) {
-        db.prepare('DELETE FROM task_deliverables WHERE task_id IN (SELECT id FROM tasks WHERE workspace_id = ?)').run(id);
-      }
-      
-      // 7. Delete planning questions
-      if (taskIds.length > 0) {
-        db.prepare('DELETE FROM planning_questions WHERE task_id IN (SELECT id FROM tasks WHERE workspace_id = ?)').run(id);
-      }
-      
-      // 8. Delete planning specs
-      if (taskIds.length > 0) {
-        db.prepare('DELETE FROM planning_specs WHERE task_id IN (SELECT id FROM tasks WHERE workspace_id = ?)').run(id);
-      }
-      
-      // 9. Delete conversations and their participants
-      if (taskIds.length > 0) {
-        db.prepare(`
-          DELETE FROM conversation_participants 
-          WHERE conversation_id IN (SELECT id FROM conversations WHERE task_id IN (SELECT id FROM tasks WHERE workspace_id = ?))
-        `).run(id);
-        db.prepare('DELETE FROM conversations WHERE task_id IN (SELECT id FROM tasks WHERE workspace_id = ?)').run(id);
-      }
-      
-      // 10. Delete tasks
-      db.prepare('DELETE FROM tasks WHERE workspace_id = ?').run(id);
-      
-      // 11. Delete agents
-      db.prepare('DELETE FROM agents WHERE workspace_id = ?').run(id);
-      
-      // 12. Delete the workspace
-      db.prepare('DELETE FROM workspaces WHERE id = ?').run(id);
-    });
-    
-    deleteWorkspace();
+    const preview = deleteWorkspaceById(db, id);
+    if (!preview) {
+      return NextResponse.json({ error: 'Workspace not found' }, { status: 404 });
+    }
     
     return NextResponse.json({ 
       success: true,
       deleted: {
-        tasks: taskCount.count,
-        agents: agentCount.count
-      }
+        ...preview.counts,
+      },
     });
   } catch (error) {
     console.error('Failed to delete workspace:', error);

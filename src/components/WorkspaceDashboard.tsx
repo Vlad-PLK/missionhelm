@@ -5,6 +5,37 @@ import { Plus, ArrowRight, Folder, Users, CheckSquare, Trash2, AlertTriangle } f
 import Link from 'next/link';
 import type { WorkspaceStats } from '@/lib/types';
 
+const PROTECTED_WORKSPACE_SLUGS = new Set(['default', 'cafe-fino', 'autonomous-workflow', 'cronjobs-review']);
+
+interface WorkspaceDeletePreview {
+  workspace: {
+    id: string;
+    name: string;
+    slug: string;
+    folder_path?: string | null;
+  };
+  protected: boolean;
+  counts: {
+    tasks: number;
+    agents: number;
+    openclaw_sessions: number;
+    messages: number;
+    events: number;
+    task_activities: number;
+    task_deliverables: number;
+    planning_questions: number;
+    planning_specs: number;
+    conversations: number;
+    conversation_participants: number;
+    task_groups: number;
+    task_dependencies: number;
+    workspace_agents: number;
+    task_milestones: number;
+    task_progress: number;
+  };
+  warnings: string[];
+}
+
 export function WorkspaceDashboard() {
   const [workspaces, setWorkspaces] = useState<WorkspaceStats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,10 +156,51 @@ export function WorkspaceDashboard() {
 function WorkspaceCard({ workspace, onDelete }: { workspace: WorkspaceStats; onDelete: (id: string) => void }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deletePreview, setDeletePreview] = useState<WorkspaceDeletePreview | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+
+  const isProtected = PROTECTED_WORKSPACE_SLUGS.has(workspace.slug);
+
+  const openDeleteModal = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (isProtected) {
+      alert(`Workspace "${workspace.name}" is protected and cannot be deleted.`);
+      return;
+    }
+
+    setShowDeleteConfirm(true);
+    setDeletePreview(null);
+    setConfirmText('');
+    setLoadingPreview(true);
+
+    try {
+      const res = await fetch(`/api/workspaces/${workspace.id}/delete-preview`);
+      const data = await res.json();
+      if (res.ok) {
+        setDeletePreview(data);
+      } else {
+        alert(data.error || 'Failed to load workspace delete preview');
+        setShowDeleteConfirm(false);
+      }
+    } catch {
+      alert('Failed to load workspace delete preview');
+      setShowDeleteConfirm(false);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (isProtected) {
+      return;
+    }
+
     setDeleting(true);
     try {
       const res = await fetch(`/api/workspaces/${workspace.id}`, { method: 'DELETE' });
@@ -143,8 +215,12 @@ function WorkspaceCard({ workspace, onDelete }: { workspace: WorkspaceStats; onD
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
+      setConfirmText('');
     }
   };
+
+  const needsTypedConfirmation = (deletePreview?.counts.tasks || 0) > 0 || (deletePreview?.counts.agents || 0) > 0;
+  const confirmationMatches = confirmText.trim() === workspace.slug;
   
   return (
     <>
@@ -161,13 +237,9 @@ function WorkspaceCard({ workspace, onDelete }: { workspace: WorkspaceStats; onD
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {workspace.id !== 'default' && (
+            {!isProtected && (
               <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setShowDeleteConfirm(true);
-                }}
+                onClick={openDeleteModal}
                 className="p-1.5 lg:p-1.5 rounded hover:bg-mc-accent-red/20 text-mc-text-secondary hover:text-mc-accent-red transition-colors lg:opacity-0 lg:group-hover:opacity-100"
                 title="Delete workspace"
               >
@@ -206,14 +278,57 @@ function WorkspaceCard({ workspace, onDelete }: { workspace: WorkspaceStats; onD
             </div>
           </div>
           
-          <p className="text-mc-text-secondary mb-6 text-sm sm:text-base">
-            Are you sure you want to delete <strong>{workspace.name}</strong>? 
-            {(workspace.taskCounts.total > 0 || workspace.agentCount > 0) && (
-              <span className="block mt-2 text-mc-accent-yellow">
-                ⚠️ This will also delete {workspace.taskCounts.total} task(s) and {workspace.agentCount} agent(s).
-              </span>
+            {loadingPreview ? (
+              <p className="text-mc-text-secondary mb-6 text-sm sm:text-base">Loading delete preview...</p>
+            ) : (
+              <div className="mb-6 space-y-4 text-sm sm:text-base">
+                <p className="text-mc-text-secondary">
+                  Are you sure you want to delete <strong>{workspace.name}</strong>?
+                </p>
+
+                {deletePreview && (
+                  <div className="space-y-3">
+                    <div className="rounded-lg border border-mc-border p-3 bg-mc-bg/40 text-sm text-mc-text-secondary space-y-1">
+                      <div>{deletePreview.counts.tasks} task(s)</div>
+                      <div>{deletePreview.counts.agents} agent(s)</div>
+                      <div>{deletePreview.counts.openclaw_sessions} OpenClaw session record(s)</div>
+                      <div>{deletePreview.counts.messages} message(s)</div>
+                      <div>{deletePreview.counts.events} event(s)</div>
+                      <div>{deletePreview.counts.conversations} task conversation(s)</div>
+                      {(deletePreview.counts.task_groups > 0 || deletePreview.counts.task_dependencies > 0 || deletePreview.counts.workspace_agents > 0) && (
+                        <>
+                          <div>{deletePreview.counts.task_groups} task group(s)</div>
+                          <div>{deletePreview.counts.task_dependencies} task dependenc{deletePreview.counts.task_dependencies === 1 ? 'y' : 'ies'}</div>
+                          <div>{deletePreview.counts.workspace_agents} workspace-agent link(s)</div>
+                        </>
+                      )}
+                    </div>
+
+                    {deletePreview.warnings.length > 0 && (
+                      <div className="space-y-2">
+                        {deletePreview.warnings.map((warning) => (
+                          <div key={warning} className="text-mc-accent-yellow text-sm">⚠️ {warning}</div>
+                        ))}
+                      </div>
+                    )}
+
+                    {needsTypedConfirmation && (
+                      <div className="space-y-2">
+                        <label className="block text-sm text-mc-text-secondary">
+                          Type <code>{workspace.slug}</code> to confirm deletion
+                        </label>
+                        <input
+                          type="text"
+                          value={confirmText}
+                          onChange={(e) => setConfirmText(e.target.value)}
+                          className="w-full bg-mc-bg border border-mc-border rounded-lg px-3 py-2 focus:outline-none focus:border-mc-accent"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
-          </p>
           
           <div className="flex flex-col sm:flex-row justify-end gap-3">
             <button
@@ -224,7 +339,7 @@ function WorkspaceCard({ workspace, onDelete }: { workspace: WorkspaceStats; onD
             </button>
             <button
               onClick={handleDelete}
-              disabled={deleting}
+              disabled={deleting || loadingPreview || !deletePreview || (needsTypedConfirmation && !confirmationMatches)}
               className="px-4 py-2 bg-mc-accent-red text-white rounded-lg font-medium hover:bg-mc-accent-red/90 disabled:opacity-50 min-h-[44px]"
             >
               {deleting ? 'Deleting...' : 'Delete Workspace'}

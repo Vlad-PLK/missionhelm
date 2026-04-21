@@ -15,6 +15,15 @@ interface ImportRequest {
   agents: ImportAgentRequest[];
 }
 
+function normalizeImportModel(model: unknown): string | null {
+  if (!model) return null;
+  if (typeof model === 'string') return model;
+  if (typeof model === 'object' && 'primary' in model && typeof model.primary === 'string') {
+    return model.primary;
+  }
+  return null;
+}
+
 // POST /api/agents/import - Import one or more agents from the OpenClaw Gateway
 export async function POST(request: NextRequest) {
   try {
@@ -109,7 +118,7 @@ export async function POST(request: NextRequest) {
             soulMd,
             userMd,
             agentsMd,
-            agentReq.model || null,
+            normalizeImportModel(agentReq.model),
             'gateway',
             agentReq.gateway_agent_id,
             now,

@@ -11,10 +11,35 @@ interface GatewayAgent {
   id?: string;
   name?: string;
   label?: string;
-  model?: string;
+  model?: string | { primary?: string; fallbacks?: string[] };
   channel?: string;
   status?: string;
   [key: string]: unknown;
+}
+
+function normalizeModel(model: GatewayAgent['model']): {
+  model?: string;
+  modelDetails?: { primary?: string; fallbacks?: string[] };
+} {
+  if (!model) {
+    return {};
+  }
+
+  if (typeof model === 'string') {
+    return { model };
+  }
+
+  if (typeof model === 'object') {
+    return {
+      model: model.primary,
+      modelDetails: {
+        primary: model.primary,
+        fallbacks: Array.isArray(model.fallbacks) ? model.fallbacks : undefined,
+      },
+    };
+  }
+
+  return {};
 }
 
 // GET /api/agents/discover - Discover existing agents from the OpenClaw Gateway
@@ -63,11 +88,14 @@ export async function GET() {
     const discovered: DiscoveredAgent[] = gatewayAgents.map((ga) => {
       const gatewayId = ga.id || ga.name || '';
       const alreadyImported = importedGatewayIds.has(gatewayId);
+      const { model, modelDetails } = normalizeModel(ga.model);
+
       return {
         id: gatewayId,
         name: ga.name || ga.label || gatewayId,
         label: ga.label,
-        model: ga.model,
+        model,
+        model_details: modelDetails,
         channel: ga.channel,
         status: ga.status,
         already_imported: alreadyImported,

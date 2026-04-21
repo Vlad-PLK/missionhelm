@@ -6,8 +6,6 @@ export type TaskStatus = 'pending_dispatch' | 'planning' | 'inbox' | 'assigned' 
 
 export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent';
 
-export type TaskType = 'feature' | 'bugfix' | 'research' | 'documentation' | 'deployment' | 'general';
-
 export type MessageType = 'text' | 'system' | 'task_update' | 'file';
 
 export type ConversationType = 'direct' | 'group' | 'task';
@@ -50,6 +48,10 @@ export interface DiscoveredAgent {
   name: string;
   label?: string;
   model?: string;
+  model_details?: {
+    primary?: string;
+    fallbacks?: string[];
+  };
   channel?: string;
   status?: string;
   already_imported: boolean;
@@ -60,11 +62,8 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  task_type?: TaskType;
   status: TaskStatus;
   priority: TaskPriority;
-  estimated_hours?: number;
-  actual_hours?: number;
   assigned_agent_id: string | null;
   created_by_agent_id: string | null;
   workspace_id: string;
@@ -293,9 +292,7 @@ export interface UpdateAgentRequest extends Partial<CreateAgentRequest> {
 export interface CreateTaskRequest {
   title: string;
   description?: string;
-  task_type?: TaskType;
   priority?: TaskPriority;
-  estimated_hours?: number;
   assigned_agent_id?: string;
   created_by_agent_id?: string;
   business_id?: string;

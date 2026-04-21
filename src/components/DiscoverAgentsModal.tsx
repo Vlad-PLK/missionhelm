@@ -120,6 +120,12 @@ export function DiscoverAgentsModal({ onClose, workspaceId }: DiscoverAgentsModa
 
   const availableCount = agents.filter((a) => !a.already_imported).length;
 
+  const formatModel = (agent: DiscoveredAgent) => {
+    if (agent.model) return agent.model;
+    if (agent.model_details?.primary) return agent.model_details.primary;
+    return null;
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-3 sm:p-4">
       <div className="bg-mc-bg-secondary border border-mc-border rounded-t-xl sm:rounded-lg w-full max-w-2xl max-h-[88vh] sm:max-h-[80vh] flex flex-col pb-[env(safe-area-inset-bottom)] sm:pb-0">
@@ -215,6 +221,7 @@ export function DiscoverAgentsModal({ onClose, workspaceId }: DiscoverAgentsModa
                 {agents.map((agent) => {
                   const isSelected = selectedIds.has(agent.id);
                   const isImported = agent.already_imported;
+                  const modelLabel = formatModel(agent);
 
                   return (
                     <div
@@ -257,7 +264,7 @@ export function DiscoverAgentsModal({ onClose, workspaceId }: DiscoverAgentsModa
                           )}
                         </div>
                         <div className="flex items-center gap-3 text-xs text-mc-text-secondary mt-0.5">
-                          {agent.model && <span>Model: {agent.model}</span>}
+                          {modelLabel && <span>Model: {modelLabel}</span>}
                           {agent.channel && <span>Channel: {agent.channel}</span>}
                           {agent.status && <span>Status: {agent.status}</span>}
                           <span className="text-mc-text-secondary/60">ID: {agent.id}</span>

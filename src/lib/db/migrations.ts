@@ -233,28 +233,15 @@ const migrations: Migration[] = [
   },
   {
     id: '010',
-    name: 'add_task_type_and_hours',
+    name: 'add_workspace_folder_path',
     up: (db) => {
-      console.log('[Migration 010] Adding task_type and hours to tasks...');
+      console.log('[Migration 010] Adding folder_path to workspaces...');
 
-      const tasksInfo = db.prepare("PRAGMA table_info(tasks)").all() as { name: string }[];
+      const workspacesInfo = db.prepare("PRAGMA table_info(workspaces)").all() as { name: string }[];
 
-      // Add task_type column
-      if (!tasksInfo.some(col => col.name === 'task_type')) {
-        db.exec(`ALTER TABLE tasks ADD COLUMN task_type TEXT DEFAULT 'general'`);
-        console.log('[Migration 010] Added task_type to tasks');
-      }
-
-      // Add estimated_hours column
-      if (!tasksInfo.some(col => col.name === 'estimated_hours')) {
-        db.exec(`ALTER TABLE tasks ADD COLUMN estimated_hours REAL`);
-        console.log('[Migration 010] Added estimated_hours to tasks');
-      }
-
-      // Add actual_hours column
-      if (!tasksInfo.some(col => col.name === 'actual_hours')) {
-        db.exec(`ALTER TABLE tasks ADD COLUMN actual_hours REAL`);
-        console.log('[Migration 010] Added actual_hours to tasks');
+      if (!workspacesInfo.some(col => col.name === 'folder_path')) {
+        db.exec(`ALTER TABLE workspaces ADD COLUMN folder_path TEXT`);
+        console.log('[Migration 010] Added folder_path to workspaces');
       }
     }
   },
@@ -299,6 +286,20 @@ const migrations: Migration[] = [
       db.exec(`CREATE INDEX IF NOT EXISTS idx_progress_task ON task_progress(task_id)`);
 
       console.log('[Migration 011] Created task_milestones and task_progress tables');
+    }
+  },
+  {
+    id: '012',
+    name: 'ensure_workspace_folder_path',
+    up: (db) => {
+      console.log('[Migration 012] Ensuring folder_path exists on workspaces...');
+
+      const workspacesInfo = db.prepare("PRAGMA table_info(workspaces)").all() as { name: string }[];
+
+      if (!workspacesInfo.some(col => col.name === 'folder_path')) {
+        db.exec(`ALTER TABLE workspaces ADD COLUMN folder_path TEXT`);
+        console.log('[Migration 012] Added folder_path to workspaces');
+      }
     }
   }
 ];

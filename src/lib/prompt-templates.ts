@@ -1,4 +1,4 @@
-import { queryOne, queryAll } from '@/lib/db';
+import { queryOne } from '@/lib/db';
 import type { Task, Agent, Workspace } from '@/lib/types';
 import { getMissionControlUrl, getProjectsPath } from '@/lib/config';
 import { isCodingTask } from './opencode';
@@ -27,10 +27,19 @@ function resolveTilde(input: string): string {
   return input.replace(/^~/, process.env.HOME || process.env.USERPROFILE || '');
 }
 
+function shellQuote(input: string): string {
+  return `'${input.replace(/'/g, `'\\''`)}'`;
+}
+
+function promptDelimiter(taskId: string, suffix: string): string {
+  return `MC_${suffix}_${taskId.replace(/[^A-Za-z0-9_]/g, '_')}`;
+}
+
 export function buildDispatchPrompt(context: DispatchContext): string {
   const { task, agent, workspace, blockingTasks, dependentTasks, planningSpec, missionControlUrl, planningAgents } = context;
   const priorityEmoji = PRIORITY_EMOJI[task.priority] || '⚪';
   const codebaseDir = workspace?.folder_path ? resolveTilde(workspace.folder_path.trim()) : null;
+  const quotedCodebaseDir = codebaseDir ? shellQuote(codebaseDir) : null;
   
   const projectsBaseDir = resolveTilde(getProjectsPath());
   const projectDir = task.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -137,7 +146,9 @@ export function buildDispatchPrompt(context: DispatchContext): string {
   parts.push('');
 
   const isCoding = isCodingTask(task.title, task.description || '');
-  const opencodeModel = 'minimax-coding-plan/MiniMax-M2.5-highspeed';
+  const opencodeModel = 'openai/gpt-5.4';
+  const planningDelimiter = promptDelimiter(task.id, 'PLANNING_PROMPT');
+  const buildDelimiter = promptDelimiter(task.id, 'BUILD_PROMPT');
   
   if (isCoding && codebaseDir) {
     parts.push('**🤖 OPENCODE EXECUTION (MANDATORY FOR CODING TASKS):**');
@@ -147,7 +158,8 @@ export function buildDispatchPrompt(context: DispatchContext): string {
     parts.push('');
     parts.push('**Phase 1 - PLANNING (always start here):**');
     parts.push('```bash');
-    parts.push(`cd ${codebaseDir} && opencode run -m ${opencodeModel} --dir . "Planning mode:`);
+    parts.push(`cd ${quotedCodebaseDir} && opencode run -m ${opencodeModel} --dir . --prompt "$(cat <<'${planningDelimiter}'`);
+    parts.push('Planning mode:');
     parts.push(`Task: ${task.title}`);
     if (task.description) {
       parts.push(`Description: ${task.description}`);
@@ -163,18 +175,23 @@ export function buildDispatchPrompt(context: DispatchContext): string {
       planningSpec.deliverables.forEach(d => parts.push(`- ${d}`));
     }
     parts.push('');
-    parts.push('Provide a detailed step-by-step plan before writing any code."');
+    parts.push('Provide a detailed step-by-step plan before writing any code.');
+    parts.push(planningDelimiter);
+    parts.push(')"');
     parts.push('```');
     parts.push('');
     parts.push('**Phase 2 - BUILD (after planning):**');
     parts.push('```bash');
-    parts.push(`cd ${codebaseDir} && opencode run -m ${opencodeModel} --dir . "Build mode:`);
+    parts.push(`cd ${quotedCodebaseDir} && opencode run -m ${opencodeModel} --dir . --prompt "$(cat <<'${buildDelimiter}'`);
+    parts.push('Build mode:');
     parts.push(`Task: ${task.title}`);
     if (task.description) {
       parts.push(`Description: ${task.description}`);
     }
     parts.push('');
-    parts.push('Work in the current directory. Make actual code changes. Do NOT run or test the code."');
+    parts.push('Work in the current directory. Make actual code changes. Do NOT run or test the code.');
+    parts.push(buildDelimiter);
+    parts.push(')"');
     parts.push('```');
     parts.push('');
     parts.push('**🚫 STRICTLY PROHIBITED - NEVER DO THESE:**');
@@ -268,24 +285,9 @@ export function fetchDispatchContext(taskId: string): DispatchContext | null {
     ? queryOne<Workspace>('SELECT * FROM workspaces WHERE id = ?', [task.workspace_id])
     : null;
 
-  const blockingTasks = queryAll<{ id: string; title: string; status: string }>(
-    `SELECT t.id, t.title, t.status
-     FROM tasks t
-     JOIN task_dependencies td ON td.depends_on_task_id = t.id
-     WHERE td.task_id = ?
-       AND td.dependency_type = 'blocks'
-       AND t.status NOT IN ('done', 'testing', 'review')`,
-    [taskId]
-  );
+  const blockingTasks: Array<{ id: string; title: string; status: string }> = [];
 
-  const dependentTasks = queryAll<{ id: string; title: string; status: string }>(
-    `SELECT t.id, t.title, t.status
-     FROM tasks t
-     JOIN task_dependencies td ON td.task_id = t.id
-     WHERE td.depends_on_task_id = ?
-       AND td.dependency_type = 'blocks'`,
-    [taskId]
-  );
+  const dependentTasks: Array<{ id: string; title: string; status: string }> = [];
 
   let planningSpec: { success_criteria?: string[]; deliverables?: string[] } | null = null;
   if (task.planning_spec) {

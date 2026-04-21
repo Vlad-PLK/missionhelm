@@ -5,6 +5,41 @@ import type { TaskMilestone } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
+function syncTaskProgress(taskId: string, now: string) {
+  const milestones = queryAll<Pick<TaskMilestone, 'status' | 'phase' | 'order_index'>>(
+    `SELECT status, phase, order_index FROM task_milestones WHERE task_id = ? ORDER BY order_index ASC`,
+    [taskId]
+  );
+
+  const currentMilestone = milestones.find((milestone) => milestone.status === 'in_progress')
+    || milestones.find((milestone) => milestone.status !== 'completed')
+    || milestones[milestones.length - 1]
+    || null;
+
+  const currentPhase = currentMilestone?.phase || 'initiation';
+  const completedAt = milestones.length > 0 && milestones.every((milestone) => milestone.status === 'completed')
+    ? now
+    : null;
+
+  const existingProgress = queryOne<{ id: string }>('SELECT id FROM task_progress WHERE task_id = ?', [taskId]);
+
+  if (existingProgress) {
+    run(
+      `UPDATE task_progress
+       SET current_phase = ?, last_updated_at = ?, completed_at = ?
+       WHERE task_id = ?`,
+      [currentPhase, now, completedAt, taskId]
+    );
+    return;
+  }
+
+  run(
+    `INSERT INTO task_progress (id, task_id, current_phase, started_at, last_updated_at, completed_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [uuidv4(), taskId, currentPhase, now, now, completedAt]
+  );
+}
+
 // GET /api/tasks/[id]/milestones - List milestones for a task
 export async function GET(
   request: NextRequest,
@@ -73,15 +108,7 @@ export async function POST(
       [milestoneId, id, title, description || null, 'pending', phase, order_index || 0, now, now]
     );
 
-    // Initialize task_progress if not exists
-    const existingProgress = queryOne('SELECT id FROM task_progress WHERE task_id = ?', [id]);
-    if (!existingProgress) {
-      run(
-        `INSERT INTO task_progress (id, task_id, current_phase, started_at, last_updated_at)
-         VALUES (?, ?, ?, ?, ?)`,
-        [uuidv4(), id, phase, now, now]
-      );
-    }
+    syncTaskProgress(id, now);
 
     const milestone = queryOne<TaskMilestone>(
       'SELECT * FROM task_milestones WHERE id = ?',

@@ -1,8 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { queryOne, run } from '@/lib/db';
+import { queryAll, queryOne, run } from '@/lib/db';
 import type { TaskMilestone } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+
+function syncTaskProgress(taskId: string, now: string) {
+  const milestones = queryAll<Pick<TaskMilestone, 'status' | 'phase' | 'order_index'>>(
+    `SELECT status, phase, order_index FROM task_milestones WHERE task_id = ? ORDER BY order_index ASC`,
+    [taskId]
+  );
+
+  const currentMilestone = milestones.find((milestone) => milestone.status === 'in_progress')
+    || milestones.find((milestone) => milestone.status !== 'completed')
+    || milestones[milestones.length - 1]
+    || null;
+
+  const currentPhase = currentMilestone?.phase || 'initiation';
+  const completedAt = milestones.length > 0 && milestones.every((milestone) => milestone.status === 'completed')
+    ? now
+    : null;
+
+  const existingProgress = queryOne<{ id: string }>('SELECT id FROM task_progress WHERE task_id = ?', [taskId]);
+
+  if (existingProgress) {
+    run(
+      `UPDATE task_progress
+       SET current_phase = ?, last_updated_at = ?, completed_at = ?
+       WHERE task_id = ?`,
+      [currentPhase, now, completedAt, taskId]
+    );
+    return;
+  }
+
+  run(
+    `INSERT INTO task_progress (id, task_id, current_phase, started_at, last_updated_at, completed_at)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [crypto.randomUUID(), taskId, currentPhase, now, now, completedAt]
+  );
+}
 
 // GET /api/tasks/[id]/milestones/[milestoneId] - Get a single milestone
 export async function GET(
@@ -66,6 +101,8 @@ export async function PATCH(
       if (body.status === 'completed') {
         updates.push('completed_at = ?');
         values.push(now);
+      } else {
+        updates.push('completed_at = NULL');
       }
     }
     if (body.phase !== undefined) {
@@ -87,15 +124,8 @@ export async function PATCH(
 
     run(`UPDATE task_milestones SET ${updates.join(', ')} WHERE id = ?`, values);
 
-    // Update task_progress current_phase if phase changed
-    if (body.phase || body.status === 'completed') {
-      const updated = queryOne<TaskMilestone>('SELECT * FROM task_milestones WHERE id = ?', [milestoneId]);
-      if (updated) {
-        run(
-          `UPDATE task_progress SET current_phase = ?, last_updated_at = ? WHERE task_id = ?`,
-          [updated.phase, now, id]
-        );
-      }
+    if (body.phase !== undefined || body.status !== undefined) {
+      syncTaskProgress(id, now);
     }
 
     const milestone = queryOne<TaskMilestone>(
@@ -128,6 +158,7 @@ export async function DELETE(
     }
 
     run('DELETE FROM task_milestones WHERE id = ?', [milestoneId]);
+    syncTaskProgress(id, new Date().toISOString());
 
     return NextResponse.json({ success: true });
   } catch (error) {
