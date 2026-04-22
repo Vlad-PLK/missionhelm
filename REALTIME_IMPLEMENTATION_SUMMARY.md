@@ -1,12 +1,12 @@
 # Real-Time Integration Implementation Summary
 
 **Date:** January 31, 2026  
-**Project:** Mission Control  
+**Project:** Autensa  
 **Status:** ✅ Complete and Production-Ready
 
 ## 🎯 What Was Built
 
-A comprehensive real-time integration system for Mission Control that provides full transparency and live updates for task orchestration using Server-Sent Events (SSE).
+A comprehensive real-time integration system for Autensa that provides full transparency and live updates for task orchestration using Server-Sent Events (SSE).
 
 ## 📦 Deliverables
 
@@ -339,7 +339,7 @@ await fetch(`/api/tasks/${task.id}`, {
 
 ### For UI Users
 
-1. Open Mission Control
+1. Open Autensa
 2. See SSE connection indicator (green dot in console)
 3. Create/update tasks → Changes appear instantly
 4. Open task detail → Click tabs to see activity/deliverables/sessions
@@ -350,7 +350,7 @@ await fetch(`/api/tasks/${task.id}`, {
 ### On production server (Production)
 
 ```bash
-cd ~/Documents/Shared/mission-control
+cd ~/Documents/Shared/autensa
 git pull origin main
 npm install
 npm run build
@@ -360,7 +360,7 @@ npm run start
 ### Environment Variables
 
 No additional environment variables required. Uses existing:
-- `DATABASE_PATH` (optional, defaults to `./mission-control.db`)
+- `DATABASE_PATH` (optional, defaults to `./autensa.db`)
 
 ### Port Configuration
 
@@ -426,7 +426,7 @@ location /api/events/stream {
    - Check for proxy buffering issues
 
 2. **Database errors:**
-   - Delete `mission-control.db` and restart (recreates schema)
+   - Delete `autensa.db` and restart (recreates schema)
    - Ensure SQLite is up to date
 
 3. **UI not updating:**
@@ -438,7 +438,7 @@ location /api/events/stream {
 
 ```bash
 # Check database schema
-sqlite3 mission-control.db ".schema task_activities"
+sqlite3 autensa.db ".schema task_activities"
 
 # Monitor SSE events (browser console)
 // Open DevTools → Network → Filter: stream

@@ -1,14 +1,14 @@
-# Mission Control Orchestrator Instructions
+# Autensa Orchestrator Instructions
 
-You are the Mission Control orchestrator. Your job is to:
+You are the Autensa orchestrator. Your job is to:
 1. Check for new tasks in the INBOX
 2. Assign tasks to appropriate agents
 3. Spawn sub-agents to execute work
 4. Monitor progress and ensure tasks complete
 
-## CRITICAL: You MUST call Mission Control APIs
+## CRITICAL: You MUST call Autensa APIs
 
-Every action you take MUST be reflected in Mission Control via API calls. The dashboard at http://YOUR_SERVER_IP:4000 shows task status in real-time.
+Every action you take MUST be reflected in Autensa via API calls. The dashboard at http://YOUR_SERVER_IP:4000 shows task status in real-time.
 
 ## On Every Heartbeat
 
@@ -78,13 +78,13 @@ curl -X POST http://YOUR_SERVER_IP:4000/api/tasks/{TASK_ID}/activities \
 ```
 
 ### 3. Spawn a sub-agent AND register it
-When you spawn a subagent session, you MUST also register it with Mission Control:
+When you spawn a subagent session, you MUST also register it with Autensa:
 
 ```bash
 # Get your subagent session ID (e.g., from the spawn command)
 SUBAGENT_SESSION_ID="your-subagent-session-id"
 
-# Register with Mission Control
+# Register with Autensa
 curl -X POST http://YOUR_SERVER_IP:4000/api/tasks/{TASK_ID}/subagent \
   -H "Content-Type: application/json" \
   -d '{
@@ -95,11 +95,11 @@ curl -X POST http://YOUR_SERVER_IP:4000/api/tasks/{TASK_ID}/subagent \
 
 ### 4. Sub-agent creates files via UPLOAD API
 
-**IMPORTANT: You may be running on a different machine than Mission Control!**
-You may not have direct filesystem access. Use the upload API to send files to Mission Control.
+**IMPORTANT: You may be running on a different machine than Autensa!**
+You may not have direct filesystem access. Use the upload API to send files to Autensa.
 
 ```bash
-# Upload a file to Mission Control server
+# Upload a file to Autensa server
 curl -X POST http://YOUR_SERVER_IP:4000/api/files/upload \
   -H "Content-Type: application/json" \
   -d '{
@@ -178,16 +178,16 @@ curl -X PATCH http://YOUR_SERVER_IP:4000/api/tasks/{TASK_ID} \
 
 ## Output Directory
 
-All project files are stored on the Mission Control server at:
+All project files are stored on the Autensa server at:
 ```
 $PROJECTS_PATH/{project-name}/
 ```
 
 **IMPORTANT: Cross-Machine Architecture**
-- The orchestrator may run on a different machine than Mission Control
-- Mission Control runs on the server at YOUR_SERVER_IP
+- The orchestrator may run on a different machine than Autensa
+- Autensa runs on the server at YOUR_SERVER_IP
 - You may not have direct filesystem access to the projects directory
-- Use the `/api/files/upload` endpoint to send files to Mission Control
+- Use the `/api/files/upload` endpoint to send files to Autensa
 
 ## API Base URL
 
@@ -211,12 +211,12 @@ If ANY of these are false, take action instead of saying HEARTBEAT_OK.
 
 1. **DON'T** try to write files directly to the server filesystem - use the upload API!
 2. **DON'T** spawn subagents without registering them via `/api/tasks/{id}/subagent`
-3. **DON'T** register deliverables for files that don't exist on the Mission Control server
+3. **DON'T** register deliverables for files that don't exist on the Autensa server
 4. **DON'T** leave tasks stuck in IN_PROGRESS after work is done
 5. **DON'T** say HEARTBEAT_OK if there's pending work
-6. **DON'T** forget to call Mission Control APIs - the dashboard depends on them!
-7. **ALWAYS** use `/api/files/upload` to send files to Mission Control
+6. **DON'T** forget to call Autensa APIs - the dashboard depends on them!
+7. **ALWAYS** use `/api/files/upload` to send files to Autensa
 
 ## Reference
 
-Full API documentation: See ORCHESTRATION.md in the mission-control project.
+Full API documentation: See ORCHESTRATION.md in the autensa project.

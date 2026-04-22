@@ -1,8 +1,8 @@
-# Mission Control Hardening Plan (Orchestrator Scope)
+# Autensa Hardening Plan (Orchestrator Scope)
 
 > For Hermes: this is a planning-only artifact. No coding in this phase.
 
-Goal: harden runtime reliability and workflow governance for Mission Control (excluding Playwright/browser testing priority).
+Goal: harden runtime reliability and workflow governance for Autensa (excluding Playwright/browser testing priority).
 
 Architecture: split hardening into five independent implementation tracks with clear acceptance criteria and rollback notes. Execute each track as a bounded task with verification evidence.
 
@@ -98,7 +98,7 @@ Rollback
 5) Track 5 (safe bulk operations)
 
 ## Operational verification checklist
-- No runtime schema exceptions in mission-control logs for critical routes.
+- No runtime schema exceptions in autensa logs for critical routes.
 - Zero working agents with zero active tasks after reconciliation.
 - Zero review->done approvals lacking deliverables.
 - Blocked queue visible and actionable.

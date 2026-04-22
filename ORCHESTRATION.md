@@ -1,6 +1,6 @@
-# Mission Control Orchestration Guide
+# Autensa Orchestration Guide
 
-This document explains how to orchestrate tasks in Mission Control, including how to:
+This document explains how to orchestrate tasks in Autensa, including how to:
 - Register sub-agents
 - Log activities
 - Track deliverables
@@ -209,7 +209,7 @@ Then refresh and watch for:
 
 ### Approval Gate For `review -> done`
 
-Mission Control enforces approval at the backend, not just in operator docs.
+Autensa enforces approval at the backend, not just in operator docs.
 
 - `review -> done` always requires at least one deliverable.
 - If `updated_by_agent_id` is provided for `review -> done`, it must reference a master agent.

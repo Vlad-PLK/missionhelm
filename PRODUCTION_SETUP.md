@@ -1,6 +1,6 @@
 # Production Setup Guide
 
-This guide walks you through setting up Mission Control for production use with proper configuration management.
+This guide walks you through setting up Autensa for production use with proper configuration management.
 
 ## ⚠️ Security First
 
@@ -18,8 +18,8 @@ All sensitive values go in `.env.local` (which is gitignored).
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/mission-control.git
-cd mission-control
+git clone https://github.com/yourusername/autensa.git
+cd autensa
 ```
 
 ### 2. Install Dependencies
@@ -38,7 +38,7 @@ Edit `.env.local` with your configuration:
 
 ```bash
 # Database
-DATABASE_PATH=./mission-control.db
+DATABASE_PATH=./autensa.db
 
 # OpenClaw Gateway
 OPENCLAW_GATEWAY_URL=ws://127.0.0.1:18789
@@ -73,7 +73,7 @@ Visit [http://localhost:4000](http://localhost:4000)
 
 ## ⚙️ Configuration Management
 
-Mission Control supports configuration via **two methods**:
+Autensa supports configuration via **two methods**:
 
 ### Method 1: Environment Variables (.env.local)
 
@@ -102,14 +102,14 @@ Access via: **Settings** button (top-right) or `/settings`
 Settings stored in browser localStorage:
 - Workspace base path
 - Projects path
-- Mission Control API URL
+- Autensa API URL
 - Default project name
 
 **Priority:** Environment variables override UI settings for server operations.
 
 ## 📁 Workspace Structure
 
-Mission Control organizes files in a structured workspace:
+Autensa organizes files in a structured workspace:
 
 ```
 ~/Documents/Shared/              # Base workspace
@@ -119,8 +119,8 @@ Mission Control organizes files in a structured workspace:
 │   │   ├── docs/               # Project docs
 │   │   └── README.md
 │   └── [PROJECT_NAME_2]/
-└── mission-control/             # Mission Control app
-    └── mission-control.db       # Database
+└── autensa/             # Autensa app
+    └── autensa.db       # Database
 ```
 
 ### Configuring Paths
@@ -168,7 +168,7 @@ openssl rand -hex 32
 ```
 
 Copy this token to both:
-1. Mission Control's `.env.local`
+1. Autensa's `.env.local`
 2. OpenClaw's gateway configuration
 
 ## 🚀 Production Deployment
@@ -186,10 +186,10 @@ Create `.env.production.local`:
 
 ```bash
 NODE_ENV=production
-DATABASE_PATH=/var/lib/mission-control/mission-control.db
-WORKSPACE_BASE_PATH=/var/lib/mission-control/workspace
-PROJECTS_PATH=/var/lib/mission-control/workspace/projects
-MISSION_CONTROL_URL=https://mission-control.yourdomain.com
+DATABASE_PATH=/var/lib/autensa/autensa.db
+WORKSPACE_BASE_PATH=/var/lib/autensa/workspace
+PROJECTS_PATH=/var/lib/autensa/workspace/projects
+MISSION_CONTROL_URL=https://autensa.yourdomain.com
 OPENCLAW_GATEWAY_URL=wss://gateway.yourdomain.com
 OPENCLAW_GATEWAY_TOKEN=your-production-token
 ```
@@ -198,10 +198,10 @@ OPENCLAW_GATEWAY_TOKEN=your-production-token
 
 ```bash
 # Backup database
-cp mission-control.db mission-control.backup.$(date +%Y%m%d).db
+cp autensa.db autensa.backup.$(date +%Y%m%d).db
 
 # Restore from backup
-cp mission-control.backup.20250131.db mission-control.db
+cp autensa.backup.20250131.db autensa.db
 ```
 
 ## 🧪 Testing Your Setup
@@ -213,13 +213,13 @@ cp mission-control.backup.20250131.db mission-control.db
 cat .env.local
 
 # Verify database
-ls -la mission-control.db
+ls -la autensa.db
 ```
 
 ### 2. Test OpenClaw Connection
 
 1. Start OpenClaw Gateway: `openclaw gateway`
-2. Open Mission Control: `http://localhost:4000`
+2. Open Autensa: `http://localhost:4000`
 3. Check status indicator (top-right): Should show **ONLINE** (green)
 
 ### 3. Test Real-Time Updates
@@ -282,7 +282,7 @@ ls -la mission-control.db
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_PATH` | `./mission-control.db` | SQLite database file path |
+| `DATABASE_PATH` | `./autensa.db` | SQLite database file path |
 | `WORKSPACE_BASE_PATH` | `~/Documents/Shared` | Base directory for workspace |
 | `PROJECTS_PATH` | `~/Documents/Shared/projects` | Directory for project folders |
 | `MISSION_CONTROL_URL` | Auto-detected | API URL for agent orchestration |
@@ -295,10 +295,10 @@ ls -la mission-control.db
 
 | Setting | Description |
 |---------|-------------|
-| Workspace Base Path | Root directory for all Mission Control files |
+| Workspace Base Path | Root directory for all Autensa files |
 | Projects Path | Where individual project folders are created |
 | Default Project Name | Template name for new projects |
-| Mission Control URL | API endpoint (usually auto-detected) |
+| Autensa URL | API endpoint (usually auto-detected) |
 
 ## 🎯 Next Steps
 

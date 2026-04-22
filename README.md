@@ -69,7 +69,7 @@ See the full [CHANGELOG](CHANGELOG.md) for details.
 
 ## 🛡️ Privacy
 
-Mission Control is open-source and self-hosted. The project does **not** include ad trackers, third-party analytics beacons, or a centralized data collector run by us.
+Autensa is open-source and self-hosted. The project does **not** include ad trackers, third-party analytics beacons, or a centralized data collector run by us.
 
 By default, your task/project data stays in your own deployment (SQLite + workspace). If you connect external services (for example AI providers or remote gateways), only the data you explicitly send to those services leaves your environment and is governed by their policies.
 
@@ -82,7 +82,7 @@ By default, your task/project data stays in your own deployment (SQLite + worksp
 │                       YOUR MACHINE                           │
 │                                                              │
 │  ┌─────────────────┐          ┌──────────────────────────┐  │
-│  │ Mission Control  │◄────────►│    OpenClaw Gateway      │  │
+│  │ Autensa  │◄────────►│    OpenClaw Gateway      │  │
 │  │   (Next.js)      │   WS     │  (AI Agent Runtime)      │  │
 │  │   Port 4000      │          │  Port 18789              │  │
 │  └────────┬─────────┘          └───────────┬──────────────┘  │
@@ -95,7 +95,7 @@ By default, your task/project data stays in your own deployment (SQLite + worksp
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**Mission Control** = The dashboard you interact with (this project)
+**Autensa** = The dashboard you interact with (this project)
 **OpenClaw Gateway** = The AI runtime that executes tasks ([separate project](https://github.com/openclaw/openclaw))
 
 ---
@@ -137,7 +137,7 @@ OPENCLAW_GATEWAY_TOKEN=your-token-here
 # Start OpenClaw (separate terminal)
 openclaw gateway start
 
-# Start Mission Control
+# Start Autensa
 npm run dev
 ```
 
@@ -154,7 +154,7 @@ npx next start -p 4000
 
 ## 🐳 Docker
 
-You can run Mission Control in a container using the included `Dockerfile` and `docker-compose.yml`.
+You can run Autensa in a container using the included `Dockerfile` and `docker-compose.yml`.
 
 ### Prerequisites
 
@@ -192,7 +192,7 @@ Open **http://localhost:4000**.
 
 ```bash
 # View logs
-docker compose logs -f mission-control
+docker compose logs -f autensa
 
 # Stop containers
 docker compose down
@@ -204,8 +204,8 @@ docker compose down -v
 ### Data persistence
 
 Compose uses named volumes:
-- `mission-control-data` for SQLite (`/app/data`)
-- `mission-control-workspace` for workspace files (`/app/workspace`)
+- `autensa-data` for SQLite (`/app/data`)
+- `autensa-workspace` for workspace files (`/app/workspace`)
 
 ---
 
@@ -223,7 +223,7 @@ Compose uses named volumes:
 2. **AI Plans It** — The AI asks you clarifying questions to understand exactly what you need
 3. **Agent Assigned** — A specialized agent is auto-created based on your answers
 4. **Work Happens** — The agent writes code, browses the web, creates files — whatever's needed
-5. **Delivery** — Completed work shows up in Mission Control with deliverables
+5. **Delivery** — Completed work shows up in Autensa with deliverables
 
 ### Task Flow
 
@@ -245,7 +245,7 @@ Drag tasks between columns or let the system auto-advance them.
 | `OPENCLAW_GATEWAY_TOKEN` | ✅ | — | Authentication token for OpenClaw |
 | `MC_API_TOKEN` | — | — | API auth token (enables auth middleware) |
 | `WEBHOOK_SECRET` | — | — | HMAC secret for webhook validation |
-| `DATABASE_PATH` | — | `./mission-control.db` | SQLite database location |
+| `DATABASE_PATH` | — | `./autensa.db` | SQLite database location |
 | `WORKSPACE_BASE_PATH` | — | `~/Documents/Shared` | Base directory for workspace files |
 | `PROJECTS_PATH` | — | `~/Documents/Shared/projects` | Directory for project folders |
 
@@ -279,7 +279,7 @@ See [PRODUCTION_SETUP.md](PRODUCTION_SETUP.md) for the full production guide.
 
 ## 🌐 Multi-Machine Setup
 
-Run Mission Control on one machine and OpenClaw on another:
+Run Autensa on one machine and OpenClaw on another:
 
 ```env
 # Point to the remote machine
@@ -298,14 +298,14 @@ OPENCLAW_GATEWAY_TOKEN=your-shared-token
 
 ## 🗄 Database
 
-SQLite database auto-created at `./mission-control.db`.
+SQLite database auto-created at `./autensa.db`.
 
 ```bash
 # Reset (start fresh)
-rm mission-control.db
+rm autensa.db
 
 # Inspect
-sqlite3 mission-control.db ".tables"
+sqlite3 autensa.db ".tables"
 ```
 
 ---
@@ -313,7 +313,7 @@ sqlite3 mission-control.db ".tables"
 ## 📁 Project Structure
 
 ```
-mission-control/
+autensa/
 ├── src/
 │   ├── app/                    # Next.js pages & API routes
 │   │   ├── api/
@@ -396,7 +396,7 @@ See [Issue #30](https://github.com/Vlad-PLK/autensa/issues/30) for details.
 
 ## 👏 Contributors
 
-Mission Control is built by a growing community. Thank you to everyone who has contributed!
+Autensa is built by a growing community. Thank you to everyone who has contributed!
 
 <table>
   <tr>
