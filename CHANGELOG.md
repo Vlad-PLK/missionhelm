@@ -30,15 +30,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.0] - 2026-03-02
 
 ### Added
-- **Agent Activity Dashboard** — Dedicated page for monitoring agent work with mobile card layout. (#48 — thanks @pkgaiassistant-droid!)
-- **Remote Model Discovery** — Discover AI models from OpenClaw Gateway via `MODEL_DISCOVERY=true` env var. (#43 — thanks @davetha!)
+- **Agent Activity Dashboard** — Dedicated page for monitoring agent work with mobile card layout.
+- **Remote Model Discovery** — Discover AI models from OpenClaw Gateway via `MODEL_DISCOVERY=true` env var.
 - **Proxy Troubleshooting** — Added docs for users behind HTTP proxies experiencing 502 errors on agent callbacks.
 
 ### Fixed
-- **Force-Dynamic API Routes** — All API routes now use `force-dynamic` to prevent stale cached responses. (#43)
-- **Null Agent Assignment** — `assigned_agent_id` can now be null in task creation schema. (#38 — thanks @JamesCao2048!)
-- **Dispatch Spec Forwarding** — Planning spec and agent instructions now forwarded in dispatch messages. (#51)
-- **Dispatch Failure Recovery** — Tasks stuck in `pending_dispatch` auto-reset to planning status. (#52)
+- **Force-Dynamic API Routes** — All API routes now use `force-dynamic` to prevent stale cached responses.
+- **Null Agent Assignment** — `assigned_agent_id` can now be null in task creation schema.
+- **Dispatch Spec Forwarding** — Planning spec and agent instructions now forwarded in dispatch messages.
+- **Dispatch Failure Recovery** — Tasks stuck in `pending_dispatch` auto-reset to planning status.
 
 ---
 
