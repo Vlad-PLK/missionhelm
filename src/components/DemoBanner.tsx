@@ -19,7 +19,7 @@ export default function DemoBanner() {
       <span className="mr-2">🎮</span>
       <span>Live Demo — AI agents are working in real-time. This is a read-only simulation.</span>
       <a
-        href="https://github.com/crshdn/mission-control"
+        href="https://github.com/Vlad-PLK/autensa"
         target="_blank"
         rel="noopener noreferrer"
         className="ml-3 underline hover:text-blue-200 transition-colors"
