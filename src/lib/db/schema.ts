@@ -1,0 +1,284 @@
+/**
+ * Database Schema for Mission Control
+ * 
+ * This defines the current desired schema state.
+ * For existing databases, migrations handle schema updates.
+ * 
+ * IMPORTANT: When adding new tables or columns:
+ * 1. Add them here for new databases
+ * 2. Create a migration in migrations.ts for existing databases
+ */
+
+export const schema = `
+-- Workspaces table
+CREATE TABLE IF NOT EXISTS workspaces (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL UNIQUE,
+  description TEXT,
+  icon TEXT DEFAULT '📁',
+  folder_path TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Agents table
+CREATE TABLE IF NOT EXISTS agents (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  role TEXT NOT NULL,
+  description TEXT,
+  avatar_emoji TEXT DEFAULT '🤖',
+  status TEXT DEFAULT 'standby' CHECK (status IN ('standby', 'working', 'offline')),
+  is_master INTEGER DEFAULT 0,
+  workspace_id TEXT DEFAULT 'default' REFERENCES workspaces(id),
+  soul_md TEXT,
+  user_md TEXT,
+  agents_md TEXT,
+  model TEXT,
+  source TEXT DEFAULT 'local',
+  gateway_agent_id TEXT,
+  session_key_prefix TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Tasks table (Mission Queue)
+CREATE TABLE IF NOT EXISTS tasks (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  task_type TEXT DEFAULT 'general' CHECK (task_type IN ('feature', 'bugfix', 'research', 'documentation', 'deployment', 'general')),
+  status TEXT DEFAULT 'inbox' CHECK (status IN ('pending_dispatch', 'planning', 'inbox', 'assigned', 'in_progress', 'testing', 'review', 'done')),
+  priority TEXT DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+  estimated_hours REAL,
+  actual_hours REAL,
+  assigned_agent_id TEXT REFERENCES agents(id),
+  created_by_agent_id TEXT REFERENCES agents(id),
+  workspace_id TEXT DEFAULT 'default' REFERENCES workspaces(id),
+  business_id TEXT DEFAULT 'default',
+  due_date TEXT,
+  planning_session_key TEXT,
+  planning_messages TEXT,
+  planning_complete INTEGER DEFAULT 0,
+  planning_spec TEXT,
+  planning_agents TEXT,
+  planning_dispatch_error TEXT,
+  status_reason TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Planning questions table
+CREATE TABLE IF NOT EXISTS planning_questions (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  category TEXT NOT NULL,
+  question TEXT NOT NULL,
+  question_type TEXT DEFAULT 'multiple_choice' CHECK (question_type IN ('multiple_choice', 'text', 'yes_no')),
+  options TEXT,
+  answer TEXT,
+  answered_at TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Planning specs table (locked specifications)
+CREATE TABLE IF NOT EXISTS planning_specs (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL UNIQUE REFERENCES tasks(id) ON DELETE CASCADE,
+  spec_markdown TEXT NOT NULL,
+  locked_at TEXT NOT NULL,
+  locked_by TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Conversations table (agent-to-agent or task-related)
+CREATE TABLE IF NOT EXISTS conversations (
+  id TEXT PRIMARY KEY,
+  title TEXT,
+  type TEXT DEFAULT 'direct' CHECK (type IN ('direct', 'group', 'task')),
+  task_id TEXT REFERENCES tasks(id),
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Conversation participants
+CREATE TABLE IF NOT EXISTS conversation_participants (
+  conversation_id TEXT REFERENCES conversations(id) ON DELETE CASCADE,
+  agent_id TEXT REFERENCES agents(id) ON DELETE CASCADE,
+  joined_at TEXT DEFAULT (datetime('now')),
+  PRIMARY KEY (conversation_id, agent_id)
+);
+
+-- Messages table
+CREATE TABLE IF NOT EXISTS messages (
+  id TEXT PRIMARY KEY,
+  conversation_id TEXT REFERENCES conversations(id) ON DELETE CASCADE,
+  sender_agent_id TEXT REFERENCES agents(id),
+  content TEXT NOT NULL,
+  message_type TEXT DEFAULT 'text' CHECK (message_type IN ('text', 'system', 'task_update', 'file')),
+  metadata TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Events table (for live feed)
+CREATE TABLE IF NOT EXISTS events (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  agent_id TEXT REFERENCES agents(id),
+  task_id TEXT REFERENCES tasks(id),
+  message TEXT NOT NULL,
+  metadata TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Businesses/Workspaces table (legacy - kept for compatibility)
+CREATE TABLE IF NOT EXISTS businesses (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- OpenClaw session mapping
+CREATE TABLE IF NOT EXISTS openclaw_sessions (
+  id TEXT PRIMARY KEY,
+  agent_id TEXT REFERENCES agents(id),
+  openclaw_session_id TEXT NOT NULL,
+  channel TEXT,
+  status TEXT DEFAULT 'active',
+  session_type TEXT DEFAULT 'persistent',
+  task_id TEXT REFERENCES tasks(id),
+  ended_at TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Task activities table (for real-time activity log)
+CREATE TABLE IF NOT EXISTS task_activities (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  agent_id TEXT REFERENCES agents(id),
+  activity_type TEXT NOT NULL,
+  message TEXT NOT NULL,
+  metadata TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Task deliverables table (files, URLs, artifacts)
+CREATE TABLE IF NOT EXISTS task_deliverables (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  deliverable_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  path TEXT,
+  description TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Task milestones table (for intermediate task steps)
+CREATE TABLE IF NOT EXISTS task_milestones (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'blocked')),
+  phase TEXT NOT NULL,
+  order_index INTEGER DEFAULT 0,
+  completed_at TEXT,
+  completed_by_agent_id TEXT REFERENCES agents(id),
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Task progress tracking table
+CREATE TABLE IF NOT EXISTS task_progress (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL UNIQUE REFERENCES tasks(id) ON DELETE CASCADE,
+  current_phase TEXT DEFAULT 'initiation',
+  started_at TEXT,
+  last_updated_at TEXT,
+  completed_at TEXT,
+  completion_summary TEXT
+);
+
+-- Bulk operation audit reports
+CREATE TABLE IF NOT EXISTS bulk_operation_reports (
+  id TEXT PRIMARY KEY,
+  operation_type TEXT NOT NULL CHECK (operation_type IN ('transition', 'delete')),
+  execution_mode TEXT NOT NULL CHECK (execution_mode IN ('dry-run', 'execute')),
+  status TEXT NOT NULL CHECK (status IN ('completed', 'failed')),
+  requested_by_agent_id TEXT REFERENCES agents(id),
+  reason TEXT,
+  request_payload TEXT,
+  report_json TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Archived task snapshots for destructive bulk deletes
+CREATE TABLE IF NOT EXISTS task_archives (
+  id TEXT PRIMARY KEY,
+  original_task_id TEXT NOT NULL,
+  bulk_report_id TEXT,
+  archived_by_agent_id TEXT REFERENCES agents(id),
+  archive_reason TEXT NOT NULL,
+  source_operation TEXT NOT NULL CHECK (source_operation IN ('bulk_delete')),
+  snapshot_json TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_agent_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_workspace ON tasks(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_agents_workspace ON agents(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_events_created ON events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
+CREATE INDEX IF NOT EXISTS idx_activities_task ON task_activities(task_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_deliverables_task ON task_deliverables(task_id);
+CREATE INDEX IF NOT EXISTS idx_openclaw_sessions_task ON openclaw_sessions(task_id);
+CREATE INDEX IF NOT EXISTS idx_planning_questions_task ON planning_questions(task_id, sort_order);
+CREATE INDEX IF NOT EXISTS idx_milestones_task ON task_milestones(task_id, order_index);
+CREATE INDEX IF NOT EXISTS idx_progress_task ON task_progress(task_id);
+CREATE INDEX IF NOT EXISTS idx_bulk_reports_created ON bulk_operation_reports(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_task_archives_task ON task_archives(original_task_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_task_archives_report ON task_archives(bulk_report_id);
+
+-- Task blockers table (for triage visibility)
+CREATE TABLE IF NOT EXISTS task_blockers (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  blocker_type TEXT NOT NULL CHECK (blocker_type IN ('external_dependency', 'approval_pending', 'resource_unavailable', 'technical_impediment', 'spec_ambiguous', 'test_blocker')),
+  severity TEXT DEFAULT 'medium' CHECK (severity IN ('critical', 'high', 'medium', 'low')),
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'escalated', 'resolved')),
+  title TEXT NOT NULL,
+  description TEXT,
+  identified_by_agent_id TEXT REFERENCES agents(id),
+  escalated_at TEXT,
+  escalated_to_agent_id TEXT REFERENCES agents(id),
+  resolved_at TEXT,
+  resolved_by_agent_id TEXT REFERENCES agents(id),
+  resolution_note TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Blocker escalation signals table
+CREATE TABLE IF NOT EXISTS blocker_escalations (
+  id TEXT PRIMARY KEY,
+  blocker_id TEXT NOT NULL REFERENCES task_blockers(id) ON DELETE CASCADE,
+  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  escalated_by_agent_id TEXT REFERENCES agents(id),
+  escalated_to_agent_id TEXT REFERENCES agents(id),
+  escalation_note TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Indexes for blocker tables
+CREATE INDEX IF NOT EXISTS idx_blockers_task ON task_blockers(task_id);
+CREATE INDEX IF NOT EXISTS idx_blockers_status ON task_blockers(status);
+CREATE INDEX IF NOT EXISTS idx_blockers_severity ON task_blockers(severity);
+CREATE INDEX IF NOT EXISTS idx_escalations_blocker ON blocker_escalations(blocker_id);
+`;

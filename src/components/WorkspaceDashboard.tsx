@@ -1,0 +1,466 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Plus, ArrowRight, Folder, Users, CheckSquare, Trash2, AlertTriangle, ActivitySquare, Settings2 } from 'lucide-react';
+import Link from 'next/link';
+import type { WorkspaceStats } from '@/lib/types';
+
+const PROTECTED_WORKSPACE_SLUGS = new Set(['default', 'cafe-fino', 'autonomous-workflow', 'cronjobs-review']);
+
+interface WorkspaceDeletePreview {
+  workspace: {
+    id: string;
+    name: string;
+    slug: string;
+    folder_path?: string | null;
+  };
+  protected: boolean;
+  counts: {
+    tasks: number;
+    agents: number;
+    openclaw_sessions: number;
+    messages: number;
+    events: number;
+    task_activities: number;
+    task_deliverables: number;
+    planning_questions: number;
+    planning_specs: number;
+    conversations: number;
+    conversation_participants: number;
+    task_groups: number;
+    task_dependencies: number;
+    workspace_agents: number;
+    task_milestones: number;
+    task_progress: number;
+  };
+  warnings: string[];
+}
+
+export function WorkspaceDashboard() {
+  const [workspaces, setWorkspaces] = useState<WorkspaceStats[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  useEffect(() => {
+    loadWorkspaces();
+  }, []);
+
+  const loadWorkspaces = async () => {
+    try {
+      const res = await fetch('/api/workspaces?stats=true');
+      if (res.ok) {
+        const data = await res.json();
+        setWorkspaces(data);
+      }
+    } catch (error) {
+      console.error('Failed to load workspaces:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-mc-bg flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-4xl mb-4 animate-pulse">🦞</div>
+          <p className="text-mc-text-secondary">Loading workspaces...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-mc-bg">
+      {/* Header */}
+      <header className="border-b border-mc-border bg-mc-bg-secondary">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🦞</span>
+              <h1 className="text-lg lg:text-xl font-bold">Mission Control</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link href="/operations" className="hidden md:inline-flex items-center gap-2 px-3 lg:px-4 py-2 border border-mc-border bg-mc-bg text-mc-text rounded-lg font-medium hover:border-mc-accent/40 min-h-[44px]">
+                <ActivitySquare className="w-4 h-4" />
+                Operations
+              </Link>
+              <Link href="/admin/system" className="hidden md:inline-flex items-center gap-2 px-3 lg:px-4 py-2 border border-mc-border bg-mc-bg text-mc-text rounded-lg font-medium hover:border-mc-accent/40 min-h-[44px]">
+                <Settings2 className="w-4 h-4" />
+                System
+              </Link>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-mc-accent text-mc-bg rounded-lg font-medium hover:bg-mc-accent/90 min-h-[44px] active:scale-95 transition-transform"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">New Workspace</span>
+                <span className="sm:hidden">New</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 lg:px-6 py-6 lg:py-8">
+        <div className="mb-6 lg:mb-8">
+          <h2 className="text-xl lg:text-2xl font-bold mb-2">All Workspaces</h2>
+          <p className="text-mc-text-secondary text-sm lg:text-base">
+            Select a workspace to view its mission queue and agents
+          </p>
+        </div>
+
+        {workspaces.length === 0 ? (
+          <div className="text-center py-12 lg:py-16">
+            <Folder className="w-12 lg:w-16 h-12 lg:h-16 mx-auto text-mc-text-secondary mb-4" />
+            <h3 className="text-lg font-medium mb-2">No workspaces yet</h3>
+            <p className="text-mc-text-secondary mb-6">
+              Create your first workspace to get started
+            </p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-6 py-3 bg-mc-accent text-mc-bg rounded-lg font-medium hover:bg-mc-accent/90 min-h-[44px] active:scale-95 transition-transform w-full sm:w-auto"
+            >
+              Create Workspace
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+            {workspaces.map((workspace) => (
+              <WorkspaceCard 
+                key={workspace.id} 
+                workspace={workspace} 
+                onDelete={(id) => setWorkspaces(workspaces.filter(w => w.id !== id))}
+              />
+            ))}
+            
+            {/* Add workspace card */}
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="border-2 border-dashed border-mc-border rounded-xl p-4 lg:p-6 hover:border-mc-accent/50 transition-colors flex flex-col items-center justify-center gap-3 min-h-[160px] lg:min-h-[200px]"
+            >
+              <div className="w-10 lg:w-12 h-10 lg:h-12 rounded-full bg-mc-bg-tertiary flex items-center justify-center">
+                <Plus className="w-5 lg:w-6 h-5 lg:h-6 text-mc-text-secondary" />
+              </div>
+              <span className="text-mc-text-secondary font-medium text-sm lg:text-base">Add Workspace</span>
+            </button>
+          </div>
+        )}
+      </main>
+
+      {/* Create Modal */}
+      {showCreateModal && (
+        <CreateWorkspaceModal 
+          onClose={() => setShowCreateModal(false)}
+          onCreated={() => {
+            setShowCreateModal(false);
+            loadWorkspaces();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function WorkspaceCard({ workspace, onDelete }: { workspace: WorkspaceStats; onDelete: (id: string) => void }) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deletePreview, setDeletePreview] = useState<WorkspaceDeletePreview | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [confirmText, setConfirmText] = useState('');
+
+  const isProtected = PROTECTED_WORKSPACE_SLUGS.has(workspace.slug);
+
+  const openDeleteModal = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (isProtected) {
+      alert(`Workspace "${workspace.name}" is protected and cannot be deleted.`);
+      return;
+    }
+
+    setShowDeleteConfirm(true);
+    setDeletePreview(null);
+    setConfirmText('');
+    setLoadingPreview(true);
+
+    try {
+      const res = await fetch(`/api/workspaces/${workspace.id}/delete-preview`);
+      const data = await res.json();
+      if (res.ok) {
+        setDeletePreview(data);
+      } else {
+        alert(data.error || 'Failed to load workspace delete preview');
+        setShowDeleteConfirm(false);
+      }
+    } catch {
+      alert('Failed to load workspace delete preview');
+      setShowDeleteConfirm(false);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (isProtected) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/workspaces/${workspace.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        onDelete(workspace.id);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to delete workspace');
+      }
+    } catch {
+      alert('Failed to delete workspace');
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+      setConfirmText('');
+    }
+  };
+
+  const needsTypedConfirmation = (deletePreview?.counts.tasks || 0) > 0 || (deletePreview?.counts.agents || 0) > 0;
+  const confirmationMatches = confirmText.trim() === workspace.slug;
+  
+  return (
+    <>
+    <Link href={`/workspace/${workspace.slug}`}>
+      <div className="bg-mc-bg-secondary border border-mc-border rounded-xl p-4 lg:p-6 hover:border-mc-accent/50 transition-all hover:shadow-lg cursor-pointer group relative workspace-card">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl lg:text-3xl">{workspace.icon}</span>
+            <div>
+              <h3 className="font-semibold text-base lg:text-lg group-hover:text-mc-accent transition-colors truncate max-w-[120px] sm:max-w-none">
+                {workspace.name}
+              </h3>
+              <p className="text-sm text-mc-text-secondary">/{workspace.slug}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {!isProtected && (
+              <button
+                onClick={openDeleteModal}
+                className="p-1.5 lg:p-1.5 rounded hover:bg-mc-accent-red/20 text-mc-text-secondary hover:text-mc-accent-red transition-colors lg:opacity-0 lg:group-hover:opacity-100"
+                title="Delete workspace"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+            <ArrowRight className="w-5 h-5 text-mc-text-secondary group-hover:text-mc-accent transition-colors" />
+          </div>
+        </div>
+
+        {/* Simple task/agent counts */}
+        <div className="flex items-center gap-4 text-sm text-mc-text-secondary mt-4">
+          <div className="flex items-center gap-1">
+            <CheckSquare className="w-4 h-4" />
+            <span>{workspace.taskCounts.total} tasks</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Users className="w-4 h-4" />
+            <span>{workspace.agentCount} agents</span>
+          </div>
+        </div>
+      </div>
+    </Link>
+
+    {/* Delete Confirmation Modal */}
+    {showDeleteConfirm && (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteConfirm(false)}>
+        <div className="bg-mc-bg-secondary border border-mc-border rounded-xl w-full max-w-md p-4 sm:p-6 modal-content" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-3 bg-mc-accent-red/20 rounded-full">
+              <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-mc-accent-red" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-base sm:text-lg">Delete Workspace</h3>
+              <p className="text-sm text-mc-text-secondary">This action cannot be undone</p>
+            </div>
+          </div>
+          
+            {loadingPreview ? (
+              <p className="text-mc-text-secondary mb-6 text-sm sm:text-base">Loading delete preview...</p>
+            ) : (
+              <div className="mb-6 space-y-4 text-sm sm:text-base">
+                <p className="text-mc-text-secondary">
+                  Are you sure you want to delete <strong>{workspace.name}</strong>?
+                </p>
+
+                {deletePreview && (
+                  <div className="space-y-3">
+                    <div className="rounded-lg border border-mc-border p-3 bg-mc-bg/40 text-sm text-mc-text-secondary space-y-1">
+                      <div>{deletePreview.counts.tasks} task(s)</div>
+                      <div>{deletePreview.counts.agents} agent(s)</div>
+                      <div>{deletePreview.counts.openclaw_sessions} OpenClaw session record(s)</div>
+                      <div>{deletePreview.counts.messages} message(s)</div>
+                      <div>{deletePreview.counts.events} event(s)</div>
+                      <div>{deletePreview.counts.conversations} task conversation(s)</div>
+                      {(deletePreview.counts.task_groups > 0 || deletePreview.counts.task_dependencies > 0 || deletePreview.counts.workspace_agents > 0) && (
+                        <>
+                          <div>{deletePreview.counts.task_groups} task group(s)</div>
+                          <div>{deletePreview.counts.task_dependencies} task dependenc{deletePreview.counts.task_dependencies === 1 ? 'y' : 'ies'}</div>
+                          <div>{deletePreview.counts.workspace_agents} workspace-agent link(s)</div>
+                        </>
+                      )}
+                    </div>
+
+                    {deletePreview.warnings.length > 0 && (
+                      <div className="space-y-2">
+                        {deletePreview.warnings.map((warning) => (
+                          <div key={warning} className="text-mc-accent-yellow text-sm">⚠️ {warning}</div>
+                        ))}
+                      </div>
+                    )}
+
+                    {needsTypedConfirmation && (
+                      <div className="space-y-2">
+                        <label className="block text-sm text-mc-text-secondary">
+                          Type <code>{workspace.slug}</code> to confirm deletion
+                        </label>
+                        <input
+                          type="text"
+                          value={confirmText}
+                          onChange={(e) => setConfirmText(e.target.value)}
+                          className="w-full bg-mc-bg border border-mc-border rounded-lg px-3 py-2 focus:outline-none focus:border-mc-accent"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          
+          <div className="flex flex-col sm:flex-row justify-end gap-3">
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              className="px-4 py-2 text-mc-text-secondary hover:text-mc-text min-h-[44px]"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting || loadingPreview || !deletePreview || (needsTypedConfirmation && !confirmationMatches)}
+              className="px-4 py-2 bg-mc-accent-red text-white rounded-lg font-medium hover:bg-mc-accent-red/90 disabled:opacity-50 min-h-[44px]"
+            >
+              {deleting ? 'Deleting...' : 'Delete Workspace'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
+  );
+}
+
+function CreateWorkspaceModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [name, setName] = useState('');
+  const [icon, setIcon] = useState('📁');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const icons = ['📁', '💼', '🏢', '🚀', '💡', '🎯', '📊', '🔧', '🌟', '🏠'];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/workspaces', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), icon }),
+      });
+
+      if (res.ok) {
+        onCreated();
+      } else {
+        const data = await res.json();
+        setError(data.error || 'Failed to create workspace');
+      }
+    } catch {
+      setError('Failed to create workspace');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-mc-bg-secondary border border-mc-border rounded-xl w-full max-w-md modal-content">
+        <div className="p-4 lg:p-6 border-b border-mc-border">
+          <h2 className="text-lg font-semibold">Create New Workspace</h2>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-4 lg:p-6 space-y-4">
+          {/* Icon selector */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Icon</label>
+            <div className="flex flex-wrap gap-2">
+              {icons.map((i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setIcon(i)}
+                  className={`w-10 h-10 rounded-lg text-xl flex items-center justify-center transition-colors ${
+                    icon === i 
+                      ? 'bg-mc-accent/20 border-2 border-mc-accent' 
+                      : 'bg-mc-bg border border-mc-border hover:border-mc-accent/50'
+                  }`}
+                >
+                  {i}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Name input */}
+          <div>
+            <label className="block text-sm font-medium mb-2">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., Acme Corp"
+              className="w-full bg-mc-bg border border-mc-border rounded-lg px-4 py-2 focus:outline-none focus:border-mc-accent"
+              autoFocus
+            />
+          </div>
+
+          {error && (
+            <div className="text-mc-accent-red text-sm">{error}</div>
+          )}
+
+          <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-mc-text-secondary hover:text-mc-text min-h-[44px]"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!name.trim() || isSubmitting}
+              className="px-6 py-2 bg-mc-accent text-mc-bg rounded-lg font-medium hover:bg-mc-accent/90 disabled:opacity-50 min-h-[44px]"
+            >
+              {isSubmitting ? 'Creating...' : 'Create Workspace'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
