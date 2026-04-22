@@ -1,6 +1,6 @@
 # Production Setup Guide
 
-This guide walks you through setting up Autensa for production use with proper configuration management.
+This guide walks you through setting up MissionHelm for production use with proper configuration management.
 
 ## ⚠️ Security First
 
@@ -18,8 +18,8 @@ All sensitive values go in `.env.local` (which is gitignored).
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/autensa.git
-cd autensa
+git clone https://github.com/yourusername/missionhelm.git
+cd missionhelm
 ```
 
 ### 2. Install Dependencies
@@ -38,7 +38,7 @@ Edit `.env.local` with your configuration:
 
 ```bash
 # Database
-DATABASE_PATH=./autensa.db
+DATABASE_PATH=./missionhelm.db
 
 # OpenClaw Gateway
 OPENCLAW_GATEWAY_URL=ws://127.0.0.1:18789
@@ -73,7 +73,7 @@ Visit [http://localhost:4000](http://localhost:4000)
 
 ## ⚙️ Configuration Management
 
-Autensa supports configuration via **two methods**:
+MissionHelm supports configuration via **two methods**:
 
 ### Method 1: Environment Variables (.env.local)
 
@@ -102,14 +102,14 @@ Access via: **Settings** button (top-right) or `/settings`
 Settings stored in browser localStorage:
 - Workspace base path
 - Projects path
-- Autensa API URL
+- MissionHelm API URL
 - Default project name
 
 **Priority:** Environment variables override UI settings for server operations.
 
 ## 📁 Workspace Structure
 
-Autensa organizes files in a structured workspace:
+MissionHelm organizes files in a structured workspace:
 
 ```
 ~/Documents/Shared/              # Base workspace
@@ -119,8 +119,8 @@ Autensa organizes files in a structured workspace:
 │   │   ├── docs/               # Project docs
 │   │   └── README.md
 │   └── [PROJECT_NAME_2]/
-└── autensa/             # Autensa app
-    └── autensa.db       # Database
+└── missionhelm/             # MissionHelm app
+    └── missionhelm.db       # Database
 ```
 
 ### Configuring Paths
@@ -168,7 +168,7 @@ openssl rand -hex 32
 ```
 
 Copy this token to both:
-1. Autensa's `.env.local`
+1. MissionHelm's `.env.local`
 2. OpenClaw's gateway configuration
 
 ## 🚀 Production Deployment
@@ -186,10 +186,10 @@ Create `.env.production.local`:
 
 ```bash
 NODE_ENV=production
-DATABASE_PATH=/var/lib/autensa/autensa.db
-WORKSPACE_BASE_PATH=/var/lib/autensa/workspace
-PROJECTS_PATH=/var/lib/autensa/workspace/projects
-MISSION_CONTROL_URL=https://autensa.yourdomain.com
+DATABASE_PATH=/var/lib/missionhelm/missionhelm.db
+WORKSPACE_BASE_PATH=/var/lib/missionhelm/workspace
+PROJECTS_PATH=/var/lib/missionhelm/workspace/projects
+MISSION_CONTROL_URL=https://missionhelm.yourdomain.com
 OPENCLAW_GATEWAY_URL=wss://gateway.yourdomain.com
 OPENCLAW_GATEWAY_TOKEN=your-production-token
 ```
@@ -198,10 +198,10 @@ OPENCLAW_GATEWAY_TOKEN=your-production-token
 
 ```bash
 # Backup database
-cp autensa.db autensa.backup.$(date +%Y%m%d).db
+cp missionhelm.db missionhelm.backup.$(date +%Y%m%d).db
 
 # Restore from backup
-cp autensa.backup.20250131.db autensa.db
+cp missionhelm.backup.20250131.db missionhelm.db
 ```
 
 ## 🧪 Testing Your Setup
@@ -213,13 +213,13 @@ cp autensa.backup.20250131.db autensa.db
 cat .env.local
 
 # Verify database
-ls -la autensa.db
+ls -la missionhelm.db
 ```
 
 ### 2. Test OpenClaw Connection
 
 1. Start OpenClaw Gateway: `openclaw gateway`
-2. Open Autensa: `http://localhost:4000`
+2. Open MissionHelm: `http://localhost:4000`
 3. Check status indicator (top-right): Should show **ONLINE** (green)
 
 ### 3. Test Real-Time Updates
@@ -282,7 +282,7 @@ ls -la autensa.db
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_PATH` | `./autensa.db` | SQLite database file path |
+| `DATABASE_PATH` | `./missionhelm.db` | SQLite database file path |
 | `WORKSPACE_BASE_PATH` | `~/Documents/Shared` | Base directory for workspace |
 | `PROJECTS_PATH` | `~/Documents/Shared/projects` | Directory for project folders |
 | `MISSION_CONTROL_URL` | Auto-detected | API URL for agent orchestration |
@@ -295,10 +295,10 @@ ls -la autensa.db
 
 | Setting | Description |
 |---------|-------------|
-| Workspace Base Path | Root directory for all Autensa files |
+| Workspace Base Path | Root directory for all MissionHelm files |
 | Projects Path | Where individual project folders are created |
 | Default Project Name | Template name for new projects |
-| Autensa URL | API endpoint (usually auto-detected) |
+| MissionHelm URL | API endpoint (usually auto-detected) |
 
 ## 🎯 Next Steps
 

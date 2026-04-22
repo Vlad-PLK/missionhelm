@@ -1,4 +1,4 @@
-# Autensa Integration Fixes
+# MissionHelm Integration Fixes
 
 **Date:** January 31, 2025  
 **Status:** ✅ COMPLETE
@@ -162,7 +162,7 @@ All criteria met:
 
 ## Usage for the orchestrator
 
-When spawning a sub-agent to work on Autensa tasks:
+When spawning a sub-agent to work on MissionHelm tasks:
 
 ```typescript
 import * as orchestrator from '@/lib/orchestration';

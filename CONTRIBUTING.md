@@ -5,8 +5,8 @@ Thanks for your interest in contributing.
 ## Development Setup
 
 ```bash
-git clone https://github.com/Vlad-PLK/autensa.git
-cd autensa
+git clone https://github.com/Vlad-PLK/missionhelm.git
+cd missionhelm
 npm install
 cp .env.example .env.local
 npm run dev

@@ -1,8 +1,8 @@
-<h1 align="center">Autensa</h1>
+<h1 align="center">MissionHelm</h1>
 
 <p align="center">
   <em>Formerly known as Mission Control</em><br>
-  <a href="https://autensa.com">autensa.com</a>
+  <a href="https://github.com/Vlad-PLK/missionhelm">github.com/Vlad-PLK/missionhelm</a>
 </p>
 
 <p align="center">
@@ -11,9 +11,9 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/stars/Vlad-PLK/autensa?style=flat-square" alt="GitHub Stars" />
-  <img src="https://img.shields.io/github/issues/Vlad-PLK/autensa?style=flat-square" alt="GitHub Issues" />
-  <img src="https://img.shields.io/github/license/Vlad-PLK/autensa?style=flat-square" alt="License" />
+  <img src="https://img.shields.io/github/stars/Vlad-PLK/missionhelm?style=flat-square" alt="GitHub Stars" />
+  <img src="https://img.shields.io/github/issues/Vlad-PLK/missionhelm?style=flat-square" alt="GitHub Issues" />
+  <img src="https://img.shields.io/github/license/Vlad-PLK/missionhelm?style=flat-square" alt="License" />
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome" />
   <img src="https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js" alt="Next.js" />
   <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
@@ -69,7 +69,7 @@ See the full [CHANGELOG](CHANGELOG.md) for details.
 
 ## 🛡️ Privacy
 
-Autensa is open-source and self-hosted. The project does **not** include ad trackers, third-party analytics beacons, or a centralized data collector run by us.
+MissionHelm is open-source and self-hosted. The project does **not** include ad trackers, third-party analytics beacons, or a centralized data collector run by us.
 
 By default, your task/project data stays in your own deployment (SQLite + workspace). If you connect external services (for example AI providers or remote gateways), only the data you explicitly send to those services leaves your environment and is governed by their policies.
 
@@ -82,7 +82,7 @@ By default, your task/project data stays in your own deployment (SQLite + worksp
 │                       YOUR MACHINE                           │
 │                                                              │
 │  ┌─────────────────┐          ┌──────────────────────────┐  │
-│  │ Autensa  │◄────────►│    OpenClaw Gateway      │  │
+│  │ MissionHelm  │◄────────►│    OpenClaw Gateway      │  │
 │  │   (Next.js)      │   WS     │  (AI Agent Runtime)      │  │
 │  │   Port 4000      │          │  Port 18789              │  │
 │  └────────┬─────────┘          └───────────┬──────────────┘  │
@@ -95,7 +95,7 @@ By default, your task/project data stays in your own deployment (SQLite + worksp
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**Autensa** = The dashboard you interact with (this project)
+**MissionHelm** = The dashboard you interact with (this project)
 **OpenClaw Gateway** = The AI runtime that executes tasks ([separate project](https://github.com/openclaw/openclaw))
 
 ---
@@ -112,8 +112,8 @@ By default, your task/project data stays in your own deployment (SQLite + worksp
 
 ```bash
 # Clone
-git clone https://github.com/Vlad-PLK/autensa.git
-cd autensa
+git clone https://github.com/Vlad-PLK/missionhelm.git
+cd missionhelm
 
 # Install dependencies
 npm install
@@ -137,7 +137,7 @@ OPENCLAW_GATEWAY_TOKEN=your-token-here
 # Start OpenClaw (separate terminal)
 openclaw gateway start
 
-# Start Autensa
+# Start MissionHelm
 npm run dev
 ```
 
@@ -154,7 +154,7 @@ npx next start -p 4000
 
 ## 🐳 Docker
 
-You can run Autensa in a container using the included `Dockerfile` and `docker-compose.yml`.
+You can run MissionHelm in a container using the included `Dockerfile` and `docker-compose.yml`.
 
 ### Prerequisites
 
@@ -192,7 +192,7 @@ Open **http://localhost:4000**.
 
 ```bash
 # View logs
-docker compose logs -f autensa
+docker compose logs -f missionhelm
 
 # Stop containers
 docker compose down
@@ -204,8 +204,8 @@ docker compose down -v
 ### Data persistence
 
 Compose uses named volumes:
-- `autensa-data` for SQLite (`/app/data`)
-- `autensa-workspace` for workspace files (`/app/workspace`)
+- `missionhelm-data` for SQLite (`/app/data`)
+- `missionhelm-workspace` for workspace files (`/app/workspace`)
 
 ---
 
@@ -223,7 +223,7 @@ Compose uses named volumes:
 2. **AI Plans It** — The AI asks you clarifying questions to understand exactly what you need
 3. **Agent Assigned** — A specialized agent is auto-created based on your answers
 4. **Work Happens** — The agent writes code, browses the web, creates files — whatever's needed
-5. **Delivery** — Completed work shows up in Autensa with deliverables
+5. **Delivery** — Completed work shows up in MissionHelm with deliverables
 
 ### Task Flow
 
@@ -245,7 +245,7 @@ Drag tasks between columns or let the system auto-advance them.
 | `OPENCLAW_GATEWAY_TOKEN` | ✅ | — | Authentication token for OpenClaw |
 | `MC_API_TOKEN` | — | — | API auth token (enables auth middleware) |
 | `WEBHOOK_SECRET` | — | — | HMAC secret for webhook validation |
-| `DATABASE_PATH` | — | `./autensa.db` | SQLite database location |
+| `DATABASE_PATH` | — | `./missionhelm.db` | SQLite database location |
 | `WORKSPACE_BASE_PATH` | — | `~/Documents/Shared` | Base directory for workspace files |
 | `PROJECTS_PATH` | — | `~/Documents/Shared/projects` | Directory for project folders |
 
@@ -279,7 +279,7 @@ See [PRODUCTION_SETUP.md](PRODUCTION_SETUP.md) for the full production guide.
 
 ## 🌐 Multi-Machine Setup
 
-Run Autensa on one machine and OpenClaw on another:
+Run MissionHelm on one machine and OpenClaw on another:
 
 ```env
 # Point to the remote machine
@@ -298,14 +298,14 @@ OPENCLAW_GATEWAY_TOKEN=your-shared-token
 
 ## 🗄 Database
 
-SQLite database auto-created at `./autensa.db`.
+SQLite database auto-created at `./missionhelm.db`.
 
 ```bash
 # Reset (start fresh)
-rm autensa.db
+rm missionhelm.db
 
 # Inspect
-sqlite3 autensa.db ".tables"
+sqlite3 missionhelm.db ".tables"
 ```
 
 ---
@@ -313,7 +313,7 @@ sqlite3 autensa.db ".tables"
 ## 📁 Project Structure
 
 ```
-autensa/
+missionhelm/
 ├── src/
 │   ├── app/                    # Next.js pages & API routes
 │   │   ├── api/
@@ -380,7 +380,7 @@ set NO_PROXY=localhost,127.0.0.1
 docker run -e NO_PROXY=localhost,127.0.0.1 ...
 ```
 
-See [open issues](https://github.com/Vlad-PLK/autensa/issues) for current status.
+See [open issues](https://github.com/Vlad-PLK/missionhelm/issues) for current status.
 
 ---
 
@@ -394,20 +394,22 @@ See [open issues](https://github.com/Vlad-PLK/autensa/issues) for current status
 
 ---
 
-## 👏 Contributors
+## 🧭 Source Attribution
 
-Contributors are tracked directly by GitHub for this repository:
-https://github.com/Vlad-PLK/autensa/graphs/contributors
+MissionHelm is an independent project evolved from the open-source foundation originally published at:
+https://github.com/crshdn/mission-control
+
+Current implementation, architecture, roadmap, and operations are maintained in this repository.
 
 ---
 
 ## ⭐ Star History
 
-<a href="https://www.star-history.com/#Vlad-PLK/autensa&Date">
+<a href="https://www.star-history.com/#Vlad-PLK/missionhelm&Date">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Vlad-PLK/autensa&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Vlad-PLK/autensa&type=Date" />
-    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Vlad-PLK/autensa&type=Date" width="600" />
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Vlad-PLK/missionhelm&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Vlad-PLK/missionhelm&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Vlad-PLK/missionhelm&type=Date" width="600" />
   </picture>
 </a>
 

@@ -1,6 +1,6 @@
 # Approval Governance
 
-Backend approval governance for Autensa review completion.
+Backend approval governance for MissionHelm review completion.
 
 ## Scope
 

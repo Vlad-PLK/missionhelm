@@ -8,6 +8,6 @@ export async function GET() {
     message: process.env.DEMO_MODE === 'true'
       ? 'This is a live demo of Mission Control. All actions are simulated.'
       : undefined,
-    github: 'https://github.com/Vlad-PLK/autensa',
+    github: 'https://github.com/Vlad-PLK/missionhelm',
   });
 }

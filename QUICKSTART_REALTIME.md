@@ -5,7 +5,7 @@
 ### 1. Pull Latest Code
 
 ```bash
-cd ~/Documents/Shared/autensa
+cd ~/Documents/Shared/missionhelm
 git pull origin main
 npm install
 ```
@@ -20,7 +20,7 @@ Open: http://localhost:4000
 
 ### 3. Verify Real-Time is Working
 
-1. Open Autensa in your browser
+1. Open MissionHelm in your browser
 2. Open browser DevTools → Console
 3. Look for: `[SSE] Connected` ← This means real-time is active!
 4. Open a second browser window side-by-side
@@ -113,7 +113,7 @@ When spawning a sub-agent:
 // 1. Spawn the sub-agent (your existing code)
 const session = await spawnSubAgent(task);
 
-// 2. Register it in Autensa
+// 2. Register it in MissionHelm
 await fetch(`http://localhost:4000/api/tasks/${taskId}/subagent`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
@@ -227,7 +227,7 @@ Make sure you're registering sub-agents via the `/api/tasks/[id]/subagent` endpo
 
 ## 🎉 You're All Set!
 
-Real-time integration is now active. Everything you do in Autensa will broadcast to all connected users instantly.
+Real-time integration is now active. Everything you do in MissionHelm will broadcast to all connected users instantly.
 
 Enjoy the new transparency! 🦞✨
 

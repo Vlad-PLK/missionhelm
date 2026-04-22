@@ -1,6 +1,6 @@
 # Demo Deployment Guide
 
-Deploy Autensa as a live, read-only demo at `demo.your-domain.example`.
+Deploy MissionHelm as a live, read-only demo at `demo.your-domain.example`.
 
 ## Server: your-demo-host
 
@@ -20,8 +20,8 @@ node --version  # Should be v20+
 
 ```bash
 cd /var/www
-git clone https://github.com/YOUR_ORG/YOUR_REPO.git autensa-demo
-cd autensa-demo
+git clone https://github.com/YOUR_ORG/YOUR_REPO.git missionhelm-demo
+cd missionhelm-demo
 ```
 
 ## Step 3: Install dependencies
@@ -36,7 +36,7 @@ npm install
 cat > .env.local << 'EOF'
 # Demo mode — read-only, no auth needed
 DEMO_MODE=true
-DATABASE_PATH=./autensa-demo.db
+DATABASE_PATH=./missionhelm-demo.db
 PORT=4000
 EOF
 ```
@@ -58,7 +58,7 @@ kill %1
 sleep 2
 
 # Seed demo data
-node scripts/demo-seed.js --db ./autensa-demo.db
+node scripts/demo-seed.js --db ./missionhelm-demo.db
 ```
 
 ## Step 7: Install PM2 and start services
@@ -66,11 +66,11 @@ node scripts/demo-seed.js --db ./autensa-demo.db
 ```bash
 npm install -g pm2
 
-# Start Autensa
-pm2 start "npx next start -p 4000" --name mc-demo --cwd /var/www/autensa-demo
+# Start MissionHelm
+pm2 start "npx next start -p 4000" --name mc-demo --cwd /var/www/missionhelm-demo
 
 # Start the simulator (generates live activity every 15 seconds)
-pm2 start scripts/demo-simulator.js --name mc-simulator --cwd /var/www/autensa-demo -- --db ./autensa-demo.db --interval 15000
+pm2 start scripts/demo-simulator.js --name mc-simulator --cwd /var/www/missionhelm-demo -- --db ./missionhelm-demo.db --interval 15000
 
 # Save for auto-restart
 pm2 save
@@ -114,12 +114,12 @@ pm2 logs mc-simulator --lines 20
 
 # Reset demo data (re-seed)
 pm2 stop mc-simulator mc-demo
-rm autensa-demo.db*
+rm missionhelm-demo.db*
 pm2 start mc-demo
 sleep 5
 curl -s http://localhost:4000/api/workspaces > /dev/null
 pm2 stop mc-demo
-node scripts/demo-seed.js --db ./autensa-demo.db
+node scripts/demo-seed.js --db ./missionhelm-demo.db
 pm2 start mc-demo mc-simulator
 
 # Update code

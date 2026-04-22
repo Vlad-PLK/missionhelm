@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Autensa will be documented in this file.
+All notable changes to MissionHelm will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -46,13 +46,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Gateway Agent Discovery** — Import existing agents from your OpenClaw Gateway into Autensa. New "Import from Gateway" button in the agent sidebar opens a discovery modal that lists all Gateway agents, shows which are already imported, and lets you bulk-import with one click. Imported agents display a `GW` badge for provenance tracking. ([#22](https://github.com/Vlad-PLK/autensa/issues/22) — thanks [@markphelps](https://github.com/markphelps)!)
-- **Docker Support** — Production-ready multi-stage Dockerfile, docker-compose.yml with persistent volumes, and `.dockerignore`. Runs as non-root, uses `dumb-init` for signal handling, includes health checks. ([#21](https://github.com/Vlad-PLK/autensa/pull/21) — thanks [@muneale](https://github.com/muneale)!)
-- **Agent Protocol Conventions** — Added `PROGRESS_UPDATE` and `BLOCKED` message formats to the Agent Protocol docs to prevent agent stalling. ([#24](https://github.com/Vlad-PLK/autensa/pull/24) — thanks [@nice-and-precise](https://github.com/nice-and-precise)!)
+- **Gateway Agent Discovery** — Import existing agents from your OpenClaw Gateway into MissionHelm. New "Import from Gateway" button in the agent sidebar opens a discovery modal that lists all Gateway agents, shows which are already imported, and lets you bulk-import with one click. Imported agents display a `GW` badge for provenance tracking.
+- **Docker Support** — Production-ready multi-stage Dockerfile, docker-compose.yml with persistent volumes, and `.dockerignore`. Runs as non-root, uses `dumb-init` for signal handling, includes health checks.
+- **Agent Protocol Conventions** — Added `PROGRESS_UPDATE` and `BLOCKED` message formats to the Agent Protocol docs to prevent agent stalling.
 
 ### Fixed
 
-- **Planning Flow Improvements** — Refactored polling to prevent stale state issues, fixed "Other" free-text option (case mismatch bug), made `due_date` nullable, increased planning timeout to 90s for larger models, auto-start polling on page load. ([#26](https://github.com/Vlad-PLK/autensa/pull/26) — thanks [@JamesTsetsekas](https://github.com/JamesTsetsekas)!)
+- **Planning Flow Improvements** — Refactored polling to prevent stale state issues, fixed "Other" free-text option (case mismatch bug), made `due_date` nullable, increased planning timeout to 90s for larger models, auto-start polling on page load.
 - **WebSocket RPC Deduplication Bug** — The event deduplication cache was silently dropping repeated RPC responses with the same payload hash, causing request timeouts. RPC responses now bypass dedup entirely.
 - **Next.js Response Caching** — Dynamic API routes that query live state (e.g., agent discovery) now use `force-dynamic` to prevent stale cached responses.
 
@@ -73,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Ed25519 Device Identity** — Gateway pairing now uses Ed25519 key-based device identity for secure handshakes.
-- **ARIA Hook** — Real-time agent tracking bridge between ARIA and Autensa (`scripts/aria-mc-hook.sh`).
+- **ARIA Hook** — Real-time agent tracking bridge between ARIA and MissionHelm (`scripts/aria-mc-hook.sh`).
 - **Planning Poll Endpoint** — New `POST /api/tasks/[id]/planning/poll` for long-poll planning updates.
 - **Retry Dispatch** — New `POST /api/tasks/[id]/planning/retry-dispatch` to retry failed task dispatches.
 - **Auto-Dispatch Module** — `src/lib/auto-dispatch.ts` for automatic task assignment after planning.
@@ -83,7 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Node.js v25 Support** — Updated `better-sqlite3` to v12.6.2 for Node v25 compatibility.
-- **Default Port** — Autensa now defaults to port 4000 (previously 3000).
+- **Default Port** — MissionHelm now defaults to port 4000 (previously 3000).
 - **Improved Planning Tab** — Enhanced UI with better question rendering, progress tracking, and error handling.
 - **Agent Sidebar Improvements** — Better status display, model selection, and agent management.
 - **Activity Log Overhaul** — Cleaner timeline UI with better type icons and formatting.
@@ -108,52 +108,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🎉 First Official Release
 
-This is the first stable, tested, and working release of Autensa.
+This is the first stable, tested, and working release of MissionHelm.
 
 ### Added
 
 - **Task Management**
-  - Create, edit, and delete tasks
-  - Drag-and-drop Kanban board with 7 status columns
-  - Task priority levels (low, normal, high, urgent)
-  - Due date support
+ - Create, edit, and delete tasks
+ - Drag-and-drop Kanban board with 7 status columns
+ - Task priority levels (low, normal, high, urgent)
+ - Due date support
 
 - **AI Planning Mode**
-  - Interactive Q&A planning flow with AI
-  - Multiple choice questions with "Other" option for custom answers
-  - Automatic spec generation from planning answers
-  - Planning session persistence (resume interrupted planning)
+ - Interactive Q&A planning flow with AI
+ - Multiple choice questions with "Other" option for custom answers
+ - Automatic spec generation from planning answers
+ - Planning session persistence (resume interrupted planning)
 
 - **Agent System**
-  - Automatic agent creation based on task requirements
-  - Agent avatars with emoji support
-  - Agent status tracking (standby, working, idle)
-  - Custom SOUL.md personality for each agent
+ - Automatic agent creation based on task requirements
+ - Agent avatars with emoji support
+ - Agent status tracking (standby, working, idle)
+ - Custom SOUL.md personality for each agent
 
 - **Task Dispatch**
-  - Automatic dispatch after planning completes
-  - Task instructions sent to agent with full context
-  - Project directory creation for deliverables
-  - Activity logging and deliverable tracking
+ - Automatic dispatch after planning completes
+ - Task instructions sent to agent with full context
+ - Project directory creation for deliverables
+ - Activity logging and deliverable tracking
 
 - **OpenClaw Integration**
-  - WebSocket connection to OpenClaw Gateway
-  - Session management for planning and agent sessions
-  - Chat history synchronization
-  - Multi-machine support (local and remote gateways)
+ - WebSocket connection to OpenClaw Gateway
+ - Session management for planning and agent sessions
+ - Chat history synchronization
+ - Multi-machine support (local and remote gateways)
 
 - **Dashboard UI**
-  - Clean, dark-themed interface
-  - Real-time task updates
-  - Event feed showing system activity
-  - Agent status panel
-  - Responsive design
+ - Clean, dark-themed interface
+ - Real-time task updates
+ - Event feed showing system activity
+ - Agent status panel
+ - Responsive design
 
 - **API Endpoints**
-  - Full REST API for tasks, agents, and events
-  - File upload endpoint for deliverables
-  - OpenClaw proxy endpoints for session management
-  - Activity and deliverable tracking endpoints
+ - Full REST API for tasks, agents, and events
+ - File upload endpoint for deliverables
+ - OpenClaw proxy endpoints for session management
+ - Activity and deliverable tracking endpoints
 
 ### Technical Details
 
@@ -189,10 +189,10 @@ This is the first stable, tested, and working release of Autensa.
 
 ---
 
-[1.4.0]: https://github.com/Vlad-PLK/autensa/compare/v1.3.0...v1.4.0
-[1.3.0]: https://github.com/Vlad-PLK/autensa/compare/v1.2.0...v1.3.0
-[1.2.0]: https://github.com/Vlad-PLK/autensa/releases/tag/v1.2.0
-[1.1.0]: https://github.com/Vlad-PLK/autensa/releases/tag/v1.1.0
-[1.0.1]: https://github.com/Vlad-PLK/autensa/releases/tag/v1.0.1
-[1.0.0]: https://github.com/Vlad-PLK/autensa/releases/tag/v1.0.0
-[0.1.0]: https://github.com/Vlad-PLK/autensa/releases/tag/v0.1.0
+[1.4.0]: https://github.com/Vlad-PLK/missionhelm/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/Vlad-PLK/missionhelm/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/Vlad-PLK/missionhelm/releases/tag/v1.2.0
+[1.1.0]: https://github.com/Vlad-PLK/missionhelm/releases/tag/v1.1.0
+[1.0.1]: https://github.com/Vlad-PLK/missionhelm/releases/tag/v1.0.1
+[1.0.0]: https://github.com/Vlad-PLK/missionhelm/releases/tag/v1.0.0
+[0.1.0]: https://github.com/Vlad-PLK/missionhelm/releases/tag/v0.1.0

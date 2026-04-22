@@ -1,7 +1,7 @@
 # Real-Time Integration Specification
 
 ## Goal
-Full transparency and real-time updates for Autensa task orchestration.
+Full transparency and real-time updates for MissionHelm task orchestration.
 
 ## Requirements
 
@@ -177,7 +177,7 @@ await fetch(`http://localhost:4000/api/tasks/${task.id}`, {
 // 4. Spawn sub-agent
 const { childSessionKey } = await spawnSubAgent(task);
 
-// 5. Register sub-agent in Autensa
+// 5. Register sub-agent in MissionHelm
 await fetch(`http://localhost:4000/api/tasks/${task.id}/subagent`, {
   method: 'POST',
   body: JSON.stringify({
@@ -202,7 +202,7 @@ await fetch(`http://localhost:4000/api/tasks/${task.id}/deliverables`, {
   body: JSON.stringify({
     deliverable_type: 'file',
     title: 'Test Page',
-    path: '~/Documents/Shared/autensa/test-page.html',
+    path: '~/Documents/Shared/missionhelm/test-page.html',
     description: 'HTML test page with styling and dynamic content'
   })
 });

@@ -1,10 +1,10 @@
-# Autensa Frontend Roadmap
+# MissionHelm Frontend Roadmap
 
 This document turns recent UI/UX recommendations into a concrete implementation roadmap that can be handed directly to a coding agent.
 
 ## Objective
 
-Evolve Autensa from a mostly board-centric control panel into a clearer operator-facing command center that fully exposes the backend capabilities already present in the system.
+Evolve MissionHelm from a mostly board-centric control panel into a clearer operator-facing command center that fully exposes the backend capabilities already present in the system.
 
 The next frontend phase should focus on:
 
@@ -15,7 +15,7 @@ The next frontend phase should focus on:
 
 ## Product Direction
 
-Autensa should feel like an AI operations cockpit.
+MissionHelm should feel like an AI operations cockpit.
 
 Users should be able to:
 
@@ -34,7 +34,7 @@ The roadmap below assumes the following are already implemented and working:
 - task lifecycle with statuses including planning, assigned, in_progress, testing, review, done
 - task planning flow
 - task activities, deliverables, and sessions
-- OpenClaw connectivity from the Dockerized Autensa app via host networking
+- OpenClaw connectivity from the Dockerized MissionHelm app via host networking
 - agent discovery/import from OpenClaw Gateway
 - safer workspace deletion with preview and protected workspace enforcement
 - import-agent crash fix via model normalization
@@ -330,7 +330,7 @@ Expose system-level backend state that operators need but currently have to infe
 
 ### Goal
 
-Provide a top-level autensa overview across all workspaces.
+Provide a top-level missionhelm overview across all workspaces.
 
 ### Candidate route
 
