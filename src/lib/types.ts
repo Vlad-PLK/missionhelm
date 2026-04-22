@@ -6,6 +6,8 @@ export type TaskStatus = 'pending_dispatch' | 'planning' | 'inbox' | 'assigned' 
 
 export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent';
 
+export type TaskType = 'feature' | 'bugfix' | 'research' | 'documentation' | 'deployment' | 'general';
+
 export type MessageType = 'text' | 'system' | 'task_update' | 'file';
 
 export type ConversationType = 'direct' | 'group' | 'task';
@@ -13,6 +15,7 @@ export type ConversationType = 'direct' | 'group' | 'task';
 export type EventType =
   | 'task_created'
   | 'task_assigned'
+  | 'task_dispatched'
   | 'task_status_changed'
   | 'task_completed'
   | 'message_sent'
@@ -62,8 +65,11 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
+  task_type?: TaskType;
   status: TaskStatus;
   priority: TaskPriority;
+  estimated_hours?: number;
+  actual_hours?: number;
   assigned_agent_id: string | null;
   created_by_agent_id: string | null;
   workspace_id: string;
@@ -75,6 +81,7 @@ export interface Task {
   planning_session_key?: string;
   planning_messages?: string;
   planning_complete?: number;
+  planning_dispatch_error?: string;
   group_id?: string;
   parent_id?: string;
   order_index?: number;
@@ -172,7 +179,7 @@ export interface OpenClawSession {
   updated_at: string;
 }
 
-export type ActivityType = 'spawned' | 'updated' | 'completed' | 'file_created' | 'status_changed' | 'milestone_completed' | 'phase_changed';
+export type ActivityType = 'spawned' | 'updated' | 'completed' | 'file_created' | 'status_changed' | 'milestone_completed' | 'phase_changed' | 'test_passed' | 'test_failed' | 'blocker_identified' | 'blocker_escalated' | 'blocker_resolved' | 'staleness_detected' | 'staleness_cleared';
 
 export interface TaskMilestone {
   id: string;
@@ -219,6 +226,72 @@ export interface TaskDeliverable {
   path?: string;
   description?: string;
   created_at: string;
+}
+
+// Blocker types for triage visibility
+export type BlockerType = 'external_dependency' | 'approval_pending' | 'resource_unavailable' | 'technical_impediment' | 'spec_ambiguous' | 'test_blocker';
+
+export type BlockerSeverity = 'critical' | 'high' | 'medium' | 'low';
+
+export type BlockerStatus = 'active' | 'escalated' | 'resolved';
+
+export interface TaskBlocker {
+  id: string;
+  task_id: string;
+  blocker_type: BlockerType;
+  severity: BlockerSeverity;
+  status: BlockerStatus;
+  title: string;
+  description?: string;
+  identified_by_agent_id?: string;
+  escalated_at?: string;
+  escalated_to_agent_id?: string;
+  resolved_at?: string;
+  resolved_by_agent_id?: string;
+  resolution_note?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BlockerEscalationSignal {
+  id: string;
+  blocker_id: string;
+  task_id: string;
+  escalated_by_agent_id?: string;
+  escalated_to_agent_id?: string;
+  escalation_note?: string;
+  created_at: string;
+}
+
+// Staleness detection types
+export interface StalenessThreshold {
+  status: TaskStatus;
+  maxAgeHours: number;
+  warningThresholdHours: number;
+  escalationLevel: 'none' | 'warning' | 'critical';
+}
+
+export interface TaskStaleness {
+  task_id: string;
+  status: TaskStatus;
+  hoursInStatus: number;
+  thresholdHours: number;
+  warningHours: number;
+  isStale: boolean;
+  isWarning: boolean;
+  isCritical: boolean;
+  lastActivityAt: string;
+}
+
+export interface StalenessReport {
+  task_id: string;
+  task_title: string;
+  status: TaskStatus;
+  hoursInStatus: number;
+  isStale: boolean;
+  isCritical: boolean;
+  blockerCount: number;
+  lastActivityAt: string;
 }
 
 // Planning types
@@ -292,7 +365,10 @@ export interface UpdateAgentRequest extends Partial<CreateAgentRequest> {
 export interface CreateTaskRequest {
   title: string;
   description?: string;
+  task_type?: TaskType;
   priority?: TaskPriority;
+  estimated_hours?: number;
+  actual_hours?: number;
   assigned_agent_id?: string;
   created_by_agent_id?: string;
   business_id?: string;
@@ -302,6 +378,9 @@ export interface CreateTaskRequest {
 
 export interface UpdateTaskRequest extends Partial<CreateTaskRequest> {
   status?: TaskStatus;
+  updated_by_agent_id?: string;
+  approval_override_reason?: string;
+  approval_notes?: string;
 }
 
 export interface SendMessageRequest {

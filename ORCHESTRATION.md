@@ -207,6 +207,40 @@ Then refresh and watch for:
 }
 ```
 
+### Approval Gate For `review -> done`
+
+Mission Control enforces approval at the backend, not just in operator docs.
+
+- `review -> done` always requires at least one deliverable.
+- If `updated_by_agent_id` is provided for `review -> done`, it must reference a master agent.
+- If `MC_APPROVAL_REQUIRE_TEST_EVIDENCE=true`, the latest test activity must be `test_passed` unless an `approval_override_reason` is supplied.
+- Every successful status transition writes a structured `task_activities` receipt and `events` receipt with transition metadata.
+
+Example approval request:
+
+```bash
+curl -X PATCH http://localhost:4000/api/tasks/{TASK_ID} \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "done",
+    "updated_by_agent_id": "master-agent-uuid",
+    "approval_notes": "Reviewed deliverables and accepted final result"
+  }'
+```
+
+Example approval with test-evidence override:
+
+```bash
+curl -X PATCH http://localhost:4000/api/tasks/{TASK_ID} \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "done",
+    "updated_by_agent_id": "master-agent-uuid",
+    "approval_override_reason": "Hotfix validated manually in production-like environment",
+    "approval_notes": "Manual validation completed by operator"
+  }'
+```
+
 ## Deliverable Body Schema
 
 ```json
@@ -217,6 +251,28 @@ Then refresh and watch for:
   "description": "Optional description"
 }
 ```
+
+## Update Task Body Schema
+
+```json
+{
+  "status": "review|done",
+  "updated_by_agent_id": "optional-master-agent-uuid-for-agent-initiated-approval",
+  "approval_override_reason": "required only when test evidence policy is enabled and no passing test evidence exists",
+  "approval_notes": "optional approval note recorded in activity/event metadata"
+}
+```
+
+## Approval Policy Toggles
+
+| Variable | Default | Effect |
+|----------|---------|--------|
+| `MC_APPROVAL_REQUIRE_TEST_EVIDENCE` | `false` | Requires latest test activity to be `test_passed` before `review -> done`, unless `approval_override_reason` is provided |
+| `MC_APPROVAL_SOFT_ENFORCEMENT` | `false` | Logs approval gate failures in receipts but does not block the transition |
+
+Rollback notes:
+- Set `MC_APPROVAL_REQUIRE_TEST_EVIDENCE=false` to disable the optional test-evidence gate.
+- Set `MC_APPROVAL_SOFT_ENFORCEMENT=true` to keep audit receipts while temporarily allowing approvals through failed gates.
 
 ## Sub-Agent Body Schema
 

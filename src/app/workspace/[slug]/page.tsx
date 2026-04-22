@@ -6,14 +6,18 @@ import Link from 'next/link';
 import { ChevronLeft, Inbox, Users, Activity } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { AgentsSidebar } from '@/components/AgentsSidebar';
+import { DiscoverAgentsModal } from '@/components/DiscoverAgentsModal';
 import { MissionQueue } from '@/components/MissionQueue';
+import { TaskModal } from '@/components/TaskModal';
 import { LiveFeed } from '@/components/LiveFeed';
 import { SSEDebugPanel } from '@/components/SSEDebugPanel';
+import { WorkspaceCommandCenter } from '@/components/WorkspaceCommandCenter';
+import { WorkspaceSubnav } from '@/components/WorkspaceSubnav';
 
 import { useMissionControl } from '@/lib/store';
 import { useSSE } from '@/hooks/useSSE';
 import { debug } from '@/lib/debug';
-import type { Task, Workspace } from '@/lib/types';
+import type { Agent, Event, OpenClawSession, Task, Workspace } from '@/lib/types';
 
 type MobileTab = 'tasks' | 'agents' | 'feed';
 
@@ -33,6 +37,18 @@ export default function WorkspacePage() {
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [mobileTab, setMobileTab] = useState<MobileTab>('tasks');
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
+  const [showDiscoverModal, setShowDiscoverModal] = useState(false);
+  const [taskSnapshot, setTaskSnapshot] = useState<Task[]>([]);
+  const [agentSnapshot, setAgentSnapshot] = useState<Agent[]>([]);
+  const [eventSnapshot, setEventSnapshot] = useState<Event[]>([]);
+  const [activeSessions, setActiveSessions] = useState<OpenClawSession[]>([]);
+  const [openClawStatus, setOpenClawStatus] = useState<{
+    connected: boolean;
+    gateway_url?: string;
+    error?: string;
+    sessions_count?: number;
+  } | null>(null);
 
   // Connect to SSE for real-time updates
   useSSE();
@@ -78,13 +94,27 @@ export default function WorkspacePage() {
           fetch('/api/events'),
         ]);
 
-        if (agentsRes.ok) setAgents(await agentsRes.json());
+        if (agentsRes.ok) {
+          const agentsData = await agentsRes.json();
+          setAgents(agentsData);
+          setAgentSnapshot(agentsData);
+        }
         if (tasksRes.ok) {
           const tasksData = await tasksRes.json();
           debug.api('Loaded tasks', { count: tasksData.length });
           setTasks(tasksData);
+          setTaskSnapshot(tasksData);
         }
-        if (eventsRes.ok) setEvents(await eventsRes.json());
+        if (eventsRes.ok) {
+          const eventsData = await eventsRes.json();
+          setEvents(eventsData);
+          setEventSnapshot(eventsData);
+        }
+
+        const sessionsRes = await fetch('/api/openclaw/sessions?status=active');
+        if (sessionsRes.ok) {
+          setActiveSessions(await sessionsRes.json());
+        }
       } catch (error) {
         console.error('Failed to load data:', error);
       } finally {
@@ -104,9 +134,16 @@ export default function WorkspacePage() {
         if (openclawRes.ok) {
           const status = await openclawRes.json();
           setIsOnline(status.connected);
+          setOpenClawStatus(status);
+
+          const sessionsRes = await fetch('/api/openclaw/sessions?status=active');
+          if (sessionsRes.ok) {
+            setActiveSessions(await sessionsRes.json());
+          }
         }
       } catch {
         setIsOnline(false);
+        setOpenClawStatus({ connected: false, error: 'Failed to reach OpenClaw Gateway' });
       }
     }
 
@@ -159,9 +196,11 @@ export default function WorkspacePage() {
         if (res.ok) {
           const status = await res.json();
           setIsOnline(status.connected);
+          setOpenClawStatus(status);
         }
       } catch {
         setIsOnline(false);
+        setOpenClawStatus({ connected: false, error: 'Failed to reach OpenClaw Gateway' });
       }
     }, 30000);
 
@@ -204,9 +243,37 @@ export default function WorkspacePage() {
     );
   }
 
+  const activeAgentCount = agentSnapshot.filter((agent) => agent.status === 'working').length
+    + activeSessions.filter((session) => session.session_type === 'subagent' && ((session.agent_id && agentSnapshot.some((agent) => agent.id === session.agent_id)) || (session.task_id && taskSnapshot.some((task) => task.id === session.task_id)))).length;
+  const tasksInQueue = taskSnapshot.filter((task) => task.status !== 'done' && task.status !== 'review').length;
+
   return (
     <div className="h-screen flex flex-col bg-mc-bg overflow-hidden">
-      <Header workspace={workspace} />
+      <Header
+        workspace={workspace}
+        statsOverride={{
+          activeAgents: activeAgentCount,
+          tasksInQueue,
+        }}
+        onCreateTask={() => setShowCreateTaskModal(true)}
+      />
+      <WorkspaceSubnav workspaceSlug={workspace.slug} />
+
+      <WorkspaceCommandCenter
+        workspace={workspace}
+        tasks={taskSnapshot}
+        agents={agentSnapshot}
+        events={eventSnapshot.filter((event) => {
+          if (event.task_id && taskSnapshot.some((task) => task.id === event.task_id)) return true;
+          if (event.agent_id && agentSnapshot.some((agent) => agent.id === event.agent_id)) return true;
+          return false;
+        })}
+        openClawStatus={openClawStatus}
+        activeSessions={activeSessions}
+        onCreateTask={() => setShowCreateTaskModal(true)}
+        onImportAgents={() => setShowDiscoverModal(true)}
+        queueHref="#workspace-queue"
+      />
 
       <div className="flex-1 flex overflow-hidden">
         {/* Desktop Layout: 3 columns */}
@@ -215,7 +282,7 @@ export default function WorkspacePage() {
           <AgentsSidebar workspaceId={workspace.id} />
 
           {/* Main Content Area */}
-          <MissionQueue workspaceId={workspace.id} />
+          <MissionQueue sectionId="workspace-queue" workspaceId={workspace.id} workspaceSlug={workspace.slug} onCreateTask={() => setShowCreateTaskModal(true)} />
 
           {/* Live Feed */}
           <LiveFeed />
@@ -225,7 +292,7 @@ export default function WorkspacePage() {
         <div className="lg:hidden flex flex-col flex-1 min-h-0 overflow-hidden">
           {/* Tab Content */}
           <div className="flex-1 min-h-0 overflow-hidden relative">
-            {mobileTab === 'tasks' && <MissionQueue workspaceId={workspace.id} />}
+            {mobileTab === 'tasks' && <MissionQueue sectionId="workspace-queue-mobile" workspaceId={workspace.id} workspaceSlug={workspace.slug} onCreateTask={() => setShowCreateTaskModal(true)} />}
             {mobileTab === 'agents' && (
               <div className="h-full min-h-0 overflow-y-auto">
                 <AgentsSidebar workspaceId={workspace.id} mobile />
@@ -276,6 +343,14 @@ export default function WorkspacePage() {
 
       {/* Debug Panel - only shows when debug mode enabled */}
       <SSEDebugPanel />
+
+      {showCreateTaskModal && (
+        <TaskModal onClose={() => setShowCreateTaskModal(false)} workspaceId={workspace.id} />
+      )}
+
+      {showDiscoverModal && (
+        <DiscoverAgentsModal onClose={() => setShowDiscoverModal(false)} workspaceId={workspace.id} />
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, ArrowRight, Folder, Users, CheckSquare, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, ArrowRight, Folder, Users, CheckSquare, Trash2, AlertTriangle, ActivitySquare, Settings2 } from 'lucide-react';
 import Link from 'next/link';
 import type { WorkspaceStats } from '@/lib/types';
 
@@ -80,14 +80,24 @@ export function WorkspaceDashboard() {
               <span className="text-2xl">🦞</span>
               <h1 className="text-lg lg:text-xl font-bold">Mission Control</h1>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-mc-accent text-mc-bg rounded-lg font-medium hover:bg-mc-accent/90 min-h-[44px] active:scale-95 transition-transform"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">New Workspace</span>
-              <span className="sm:hidden">New</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <Link href="/operations" className="hidden md:inline-flex items-center gap-2 px-3 lg:px-4 py-2 border border-mc-border bg-mc-bg text-mc-text rounded-lg font-medium hover:border-mc-accent/40 min-h-[44px]">
+                <ActivitySquare className="w-4 h-4" />
+                Operations
+              </Link>
+              <Link href="/admin/system" className="hidden md:inline-flex items-center gap-2 px-3 lg:px-4 py-2 border border-mc-border bg-mc-bg text-mc-text rounded-lg font-medium hover:border-mc-accent/40 min-h-[44px]">
+                <Settings2 className="w-4 h-4" />
+                System
+              </Link>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center gap-2 px-3 lg:px-4 py-2 bg-mc-accent text-mc-bg rounded-lg font-medium hover:bg-mc-accent/90 min-h-[44px] active:scale-95 transition-transform"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">New Workspace</span>
+                <span className="sm:hidden">New</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>

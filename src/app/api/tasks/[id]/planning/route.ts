@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb, queryAll, queryOne, run } from '@/lib/db';
-import { getOpenClawClient } from '@/lib/openclaw/client';
+import { DbStartupError, getDb, getDbStartupStatus, queryAll, queryOne, run } from '@/lib/db';
 import { broadcast } from '@/lib/events';
 import { extractJSON } from '@/lib/planning-utils';
+import { planningRouteDeps } from './deps';
 // File system imports removed - using OpenClaw API instead
 
 export const dynamic = 'force-dynamic';
@@ -10,6 +10,23 @@ export const dynamic = 'force-dynamic';
 // Default planning session prefix for OpenClaw
 // Can be overridden per-agent via the session_key_prefix column on agents table
 const DEFAULT_SESSION_KEY_PREFIX = 'agent:main:';
+
+function createPreflightErrorResponse(error: DbStartupError) {
+  return NextResponse.json(
+    {
+      error: 'Database is not ready for planning operations',
+      code: 'DB_PREFLIGHT_FAILED',
+      message: 'Mission Control detected schema drift or an unrepaired startup issue. Check readiness receipts before retrying planning.',
+      readiness: error.startupStatus,
+      actions: [
+        'Open GET /api/health/readiness to inspect migration and preflight receipts.',
+        'Ensure the database file is writable so additive repair statements can be applied.',
+        'Retry the planning request after readiness reports ready=true.',
+      ],
+    },
+    { status: 503 }
+  );
+}
 
 // GET /api/tasks/[id]/planning - Get planning state
 export async function GET(
@@ -62,6 +79,9 @@ export async function GET(
       isStarted: messages.length > 0,
     });
   } catch (error) {
+    if (error instanceof DbStartupError) {
+      return createPreflightErrorResponse(error);
+    }
     console.error('Failed to get planning state:', error);
     return NextResponse.json({ error: 'Failed to get planning state' }, { status: 500 });
   }
@@ -75,6 +95,24 @@ export async function POST(
   const { id: taskId } = await params;
 
   try {
+    const readiness = getDbStartupStatus();
+    if (!readiness.ready && readiness.initializedAt) {
+      return NextResponse.json(
+        {
+          error: 'Database is not ready for planning operations',
+          code: 'DB_PREFLIGHT_FAILED',
+          message: 'Startup preflight has not reached a ready state. Planning is blocked until schema repair succeeds.',
+          readiness,
+          actions: [
+            'Open GET /api/health/readiness to review the failure receipts.',
+            'Fix any DB permission issue preventing additive repairs.',
+            'Retry planning when readiness returns HTTP 200.',
+          ],
+        },
+        { status: 503 }
+      );
+    }
+
     // Get task
     const task = getDb().prepare('SELECT * FROM tasks WHERE id = ?').get(taskId) as {
       id: string;
@@ -154,7 +192,7 @@ Respond with ONLY valid JSON in this format:
 }`;
 
     // Connect to OpenClaw and send the planning request
-    const client = getOpenClawClient();
+    const client = planningRouteDeps.getOpenClawClient();
     if (!client.isConnected()) {
       await client.connect();
     }
@@ -184,6 +222,9 @@ Respond with ONLY valid JSON in this format:
       note: 'Planning started. Poll GET endpoint for updates.',
     });
   } catch (error) {
+    if (error instanceof DbStartupError) {
+      return createPreflightErrorResponse(error);
+    }
     console.error('Failed to start planning:', error);
     return NextResponse.json({ error: 'Failed to start planning: ' + (error as Error).message }, { status: 500 });
   }
@@ -235,6 +276,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof DbStartupError) {
+      return createPreflightErrorResponse(error);
+    }
     console.error('Failed to cancel planning:', error);
     return NextResponse.json({ error: 'Failed to cancel planning: ' + (error as Error).message }, { status: 500 });
   }

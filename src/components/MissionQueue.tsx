@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronRight, GripVertical, MoreVertical, Plus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
@@ -11,6 +12,9 @@ import { TaskModal } from './TaskModal';
 
 interface MissionQueueProps {
   workspaceId?: string;
+  workspaceSlug?: string;
+  onCreateTask?: () => void;
+  sectionId?: string;
 }
 
 type MobileStatusFilter = 'all' | TaskStatus;
@@ -73,8 +77,9 @@ function priorityRank(priority: TaskPriority): number {
   return 1;
 }
 
-export function MissionQueue({ workspaceId }: MissionQueueProps) {
+export function MissionQueue({ workspaceId, workspaceSlug, onCreateTask, sectionId }: MissionQueueProps) {
   const { tasks, updateTaskStatus, addEvent } = useMissionControl();
+  const router = useRouter();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [draggedTask, setDraggedTask] = useState<Task | null>(null);
@@ -82,6 +87,11 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
   const [mobileTaskFilter, setMobileTaskFilter] = useState<MobileTaskFilter>('all');
   const [mobileSort, setMobileSort] = useState<MobileSort>('newest');
   const [statusSheetTask, setStatusSheetTask] = useState<Task | null>(null);
+
+  const openTask = (task: Task) => {
+    if (!workspaceSlug) return;
+    router.push(`/workspace/${workspaceSlug}/tasks/${task.id}`);
+  };
 
   const handleMoveTask = async (taskId: string, newStatus: TaskStatus) => {
     const task = tasks.find((t) => t.id === taskId);
@@ -181,14 +191,20 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
   };
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+    <div id={sectionId} className="flex-1 min-h-0 flex flex-col overflow-hidden scroll-mt-24">
       <div className="p-3 border-b border-mc-border flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ChevronRight className="w-4 h-4 text-mc-text-secondary" />
           <span className="text-sm font-medium uppercase tracking-wider">Mission Queue</span>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => {
+            if (onCreateTask) {
+              onCreateTask();
+              return;
+            }
+            setShowCreateModal(true);
+          }}
           className="flex items-center gap-2 px-3 py-1.5 bg-mc-accent-pink text-mc-bg rounded text-sm font-medium hover:bg-mc-accent-pink/90 min-h-[44px] active:scale-95 transition-transform"
         >
           <Plus className="w-4 h-4" />
@@ -259,7 +275,8 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
             <MobileTaskCard
               key={task.id}
               task={task}
-              onOpen={() => setEditingTask(task)}
+              onOpen={() => openTask(task)}
+              onEdit={() => setEditingTask(task)}
               onChangeStatus={() => setStatusSheetTask(task)}
             />
           ))
@@ -289,7 +306,9 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
                     key={task.id}
                     task={task}
                     onDragStart={handleDragStart}
-                    onClick={() => setEditingTask(task)}
+                    onClick={() => openTask(task)}
+                    onEdit={() => setEditingTask(task)}
+                    onChangeStatus={() => setStatusSheetTask(task)}
                     isDragging={draggedTask?.id === task.id}
                   />
                 ))}
@@ -303,13 +322,13 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
       </div>
 
       {statusSheetTask && (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
           <button
             className="absolute inset-0 bg-black/55"
             onClick={() => setStatusSheetTask(null)}
             aria-label="Close status selector"
           />
-          <div className="absolute bottom-0 left-0 right-0 bg-mc-bg-secondary border-t border-mc-border rounded-t-xl p-4 pb-6">
+          <div className="absolute bottom-0 left-0 right-0 bg-mc-bg-secondary border-t border-mc-border rounded-t-xl p-4 pb-6 lg:bottom-auto lg:left-1/2 lg:right-auto lg:top-1/2 lg:w-full lg:max-w-md lg:-translate-x-1/2 lg:-translate-y-1/2 lg:rounded-xl lg:border">
             <div className="w-10 h-1 bg-mc-border rounded-full mx-auto mb-4" />
             <h3 className="text-sm font-semibold mb-1">Move Task To</h3>
             <p className="text-xs text-mc-text-secondary mb-4 truncate">{statusSheetTask.title}</p>
@@ -335,9 +354,11 @@ export function MissionQueue({ workspaceId }: MissionQueueProps) {
       {showCreateModal && (
         <TaskModal onClose={() => setShowCreateModal(false)} workspaceId={workspaceId} />
       )}
+
       {editingTask && (
         <TaskModal task={editingTask} onClose={() => setEditingTask(null)} workspaceId={workspaceId} />
       )}
+
     </div>
   );
 }
@@ -346,10 +367,12 @@ interface TaskCardProps {
   task: Task;
   onDragStart: (e: React.DragEvent, task: Task) => void;
   onClick: () => void;
+  onEdit: () => void;
+  onChangeStatus: () => void;
   isDragging: boolean;
 }
 
-function TaskCard({ task, onDragStart, onClick, isDragging }: TaskCardProps) {
+function TaskCard({ task, onDragStart, onClick, onEdit, onChangeStatus, isDragging }: TaskCardProps) {
   const priorityStyles = {
     low: 'text-mc-text-secondary',
     normal: 'text-mc-accent',
@@ -407,6 +430,39 @@ function TaskCard({ task, onDragStart, onClick, isDragging }: TaskCardProps) {
             {formatDistanceToNow(new Date(task.created_at), { addSuffix: true })}
           </span>
         </div>
+
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick();
+            }}
+            className="px-2.5 py-1.5 rounded border border-mc-border bg-mc-bg text-xs text-mc-text hover:border-mc-accent/40"
+          >
+            Open
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="px-2.5 py-1.5 rounded border border-mc-border bg-mc-bg text-xs text-mc-text hover:border-mc-accent/40"
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onChangeStatus();
+            }}
+            className="px-2.5 py-1.5 rounded border border-mc-border bg-mc-bg text-xs text-mc-text hover:border-mc-accent/40"
+          >
+            Move
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -415,10 +471,12 @@ function TaskCard({ task, onDragStart, onClick, isDragging }: TaskCardProps) {
 function MobileTaskCard({
   task,
   onOpen,
+  onEdit,
   onChangeStatus,
 }: {
   task: Task;
   onOpen: () => void;
+  onEdit: () => void;
   onChangeStatus: () => void;
 }) {
   const statusStyle: Record<TaskStatus, string> = {
@@ -489,6 +547,29 @@ function MobileTaskCard({
           {(task.assigned_agent as unknown as { name: string }).name}
         </div>
       )}
+
+      <div className="mt-3 flex items-center gap-2">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen();
+          }}
+          className="px-2.5 py-1.5 rounded border border-mc-border bg-mc-bg text-xs text-mc-text"
+        >
+          Open
+        </button>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          className="px-2.5 py-1.5 rounded border border-mc-border bg-mc-bg text-xs text-mc-text"
+        >
+          Edit
+        </button>
+      </div>
     </div>
   );
 }

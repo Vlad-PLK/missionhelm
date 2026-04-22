@@ -48,8 +48,11 @@ CREATE TABLE IF NOT EXISTS tasks (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   description TEXT,
+  task_type TEXT DEFAULT 'general' CHECK (task_type IN ('feature', 'bugfix', 'research', 'documentation', 'deployment', 'general')),
   status TEXT DEFAULT 'inbox' CHECK (status IN ('pending_dispatch', 'planning', 'inbox', 'assigned', 'in_progress', 'testing', 'review', 'done')),
   priority TEXT DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+  estimated_hours REAL,
+  actual_hours REAL,
   assigned_agent_id TEXT REFERENCES agents(id),
   created_by_agent_id TEXT REFERENCES agents(id),
   workspace_id TEXT DEFAULT 'default' REFERENCES workspaces(id),
@@ -200,6 +203,31 @@ CREATE TABLE IF NOT EXISTS task_progress (
   completion_summary TEXT
 );
 
+-- Bulk operation audit reports
+CREATE TABLE IF NOT EXISTS bulk_operation_reports (
+  id TEXT PRIMARY KEY,
+  operation_type TEXT NOT NULL CHECK (operation_type IN ('transition', 'delete')),
+  execution_mode TEXT NOT NULL CHECK (execution_mode IN ('dry-run', 'execute')),
+  status TEXT NOT NULL CHECK (status IN ('completed', 'failed')),
+  requested_by_agent_id TEXT REFERENCES agents(id),
+  reason TEXT,
+  request_payload TEXT,
+  report_json TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Archived task snapshots for destructive bulk deletes
+CREATE TABLE IF NOT EXISTS task_archives (
+  id TEXT PRIMARY KEY,
+  original_task_id TEXT NOT NULL,
+  bulk_report_id TEXT,
+  archived_by_agent_id TEXT REFERENCES agents(id),
+  archive_reason TEXT NOT NULL,
+  source_operation TEXT NOT NULL CHECK (source_operation IN ('bulk_delete')),
+  snapshot_json TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS idx_tasks_assigned ON tasks(assigned_agent_id);
@@ -214,4 +242,43 @@ CREATE INDEX IF NOT EXISTS idx_openclaw_sessions_task ON openclaw_sessions(task_
 CREATE INDEX IF NOT EXISTS idx_planning_questions_task ON planning_questions(task_id, sort_order);
 CREATE INDEX IF NOT EXISTS idx_milestones_task ON task_milestones(task_id, order_index);
 CREATE INDEX IF NOT EXISTS idx_progress_task ON task_progress(task_id);
+CREATE INDEX IF NOT EXISTS idx_bulk_reports_created ON bulk_operation_reports(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_task_archives_task ON task_archives(original_task_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_task_archives_report ON task_archives(bulk_report_id);
+
+-- Task blockers table (for triage visibility)
+CREATE TABLE IF NOT EXISTS task_blockers (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  blocker_type TEXT NOT NULL CHECK (blocker_type IN ('external_dependency', 'approval_pending', 'resource_unavailable', 'technical_impediment', 'spec_ambiguous', 'test_blocker')),
+  severity TEXT DEFAULT 'medium' CHECK (severity IN ('critical', 'high', 'medium', 'low')),
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'escalated', 'resolved')),
+  title TEXT NOT NULL,
+  description TEXT,
+  identified_by_agent_id TEXT REFERENCES agents(id),
+  escalated_at TEXT,
+  escalated_to_agent_id TEXT REFERENCES agents(id),
+  resolved_at TEXT,
+  resolved_by_agent_id TEXT REFERENCES agents(id),
+  resolution_note TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Blocker escalation signals table
+CREATE TABLE IF NOT EXISTS blocker_escalations (
+  id TEXT PRIMARY KEY,
+  blocker_id TEXT NOT NULL REFERENCES task_blockers(id) ON DELETE CASCADE,
+  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  escalated_by_agent_id TEXT REFERENCES agents(id),
+  escalated_to_agent_id TEXT REFERENCES agents(id),
+  escalation_note TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Indexes for blocker tables
+CREATE INDEX IF NOT EXISTS idx_blockers_task ON task_blockers(task_id);
+CREATE INDEX IF NOT EXISTS idx_blockers_status ON task_blockers(status);
+CREATE INDEX IF NOT EXISTS idx_blockers_severity ON task_blockers(severity);
+CREATE INDEX IF NOT EXISTS idx_escalations_blocker ON blocker_escalations(blocker_id);
 `;

@@ -158,7 +158,7 @@ export function buildDispatchPrompt(context: DispatchContext): string {
     parts.push('');
     parts.push('**Phase 1 - PLANNING (always start here):**');
     parts.push('```bash');
-    parts.push(`cd ${quotedCodebaseDir} && opencode run -m ${opencodeModel} --dir . --prompt "$(cat <<'${planningDelimiter}'`);
+    parts.push(`cd ${quotedCodebaseDir} && opencode run -m ${opencodeModel} "$(cat <<'${planningDelimiter}'`);
     parts.push('Planning mode:');
     parts.push(`Task: ${task.title}`);
     if (task.description) {
@@ -182,7 +182,7 @@ export function buildDispatchPrompt(context: DispatchContext): string {
     parts.push('');
     parts.push('**Phase 2 - BUILD (after planning):**');
     parts.push('```bash');
-    parts.push(`cd ${quotedCodebaseDir} && opencode run -m ${opencodeModel} --dir . --prompt "$(cat <<'${buildDelimiter}'`);
+    parts.push(`cd ${quotedCodebaseDir} && opencode run -m ${opencodeModel} "$(cat <<'${buildDelimiter}'`);
     parts.push('Build mode:');
     parts.push(`Task: ${task.title}`);
     if (task.description) {
@@ -206,7 +206,7 @@ export function buildDispatchPrompt(context: DispatchContext): string {
     parts.push('');
     parts.push('**⚠️ IMPORTANT WARNINGS:**');
     parts.push('⚠️ ALWAYS run planning phase first - do NOT skip to building');
-    parts.push('⚠️ Use `--dir` with the full path to specify working directory');
+    parts.push('⚠️ Always `cd` into the target directory before running OpenCode');
     parts.push('⚠️ Make actual file changes using write/edit tools');
     parts.push('⚠️ NEVER test or run the code - only write it');
     parts.push('');

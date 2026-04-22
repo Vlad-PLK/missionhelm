@@ -3,12 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { AgentActivityDashboard } from '@/components/AgentActivityDashboard';
+import { TaskModal } from '@/components/TaskModal';
 import type { Workspace } from '@/lib/types';
 
 export default function WorkspaceActivityPage() {
   const params = useParams();
   const slug = params.slug as string;
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
 
   useEffect(() => {
     async function loadWorkspace() {
@@ -25,5 +27,12 @@ export default function WorkspaceActivityPage() {
     loadWorkspace();
   }, [slug]);
 
-  return <AgentActivityDashboard workspace={workspace} />;
+  return (
+    <>
+      <AgentActivityDashboard workspace={workspace} onCreateTask={() => setShowCreateTaskModal(true)} />
+      {showCreateTaskModal && workspace && (
+        <TaskModal workspaceId={workspace.id} onClose={() => setShowCreateTaskModal(false)} />
+      )}
+    </>
+  );
 }

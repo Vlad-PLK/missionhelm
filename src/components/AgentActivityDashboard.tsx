@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, AlertTriangle, Activity, Clock, Filter, RefreshCw } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Activity, Clock, Filter, Plus, RefreshCw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { Agent, Event, Task, Workspace } from '@/lib/types';
 
@@ -10,9 +10,10 @@ type ActivityFilter = 'all' | 'working' | 'blocked' | 'idle';
 
 interface AgentActivityDashboardProps {
   workspace?: Workspace | null;
+  onCreateTask?: () => void;
 }
 
-export function AgentActivityDashboard({ workspace }: AgentActivityDashboardProps) {
+export function AgentActivityDashboard({ workspace, onCreateTask }: AgentActivityDashboardProps) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
@@ -215,6 +216,15 @@ export function AgentActivityDashboard({ workspace }: AgentActivityDashboardProp
           </div>
 
           <div className="flex items-center gap-2">
+            {workspace && onCreateTask && (
+              <button
+                onClick={onCreateTask}
+                className="inline-flex items-center gap-2 min-h-11 px-3 rounded-lg bg-mc-accent-pink text-mc-bg text-sm font-medium hover:bg-mc-accent-pink/90"
+              >
+                <Plus className="w-4 h-4" />
+                New Task
+              </button>
+            )}
             <div className={`px-2.5 min-h-11 rounded-lg border text-xs flex items-center gap-2 ${sseConnected ? 'text-mc-accent-green border-mc-accent-green/40 bg-mc-accent-green/10' : 'text-mc-accent-yellow border-mc-accent-yellow/40 bg-mc-accent-yellow/10'}`}>
               <RefreshCw className="w-3.5 h-3.5" />
               {sseConnected ? 'LIVE' : 'FALLBACK'}

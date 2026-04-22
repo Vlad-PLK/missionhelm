@@ -126,6 +126,22 @@ export function getMissionControlUrl(): string {
   return getConfig().missionControlUrl;
 }
 
+function parseBooleanEnv(value: string | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+
+  return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
+}
+
+export function isApprovalTestEvidenceRequired(): boolean {
+  return parseBooleanEnv(process.env.MC_APPROVAL_REQUIRE_TEST_EVIDENCE);
+}
+
+export function isApprovalSoftEnforcementEnabled(): boolean {
+  return parseBooleanEnv(process.env.MC_APPROVAL_SOFT_ENFORCEMENT);
+}
+
 /**
  * Get workspace base path
  * Server-side only - returns configured path or default

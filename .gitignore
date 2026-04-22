@@ -51,3 +51,12 @@ next-env.d.ts
 *.backup
 *.bak
 *.db.backup
+
+# local knowledge/state (never publish)
+.brv/
+.nightly/
+artifacts/
+workspaces/
+*.log
+AGENTS.local.md
+AGENTS.md

@@ -288,6 +288,8 @@ ls -la mission-control.db
 | `MISSION_CONTROL_URL` | Auto-detected | API URL for agent orchestration |
 | `OPENCLAW_GATEWAY_URL` | `ws://127.0.0.1:18789` | Gateway WebSocket URL |
 | `OPENCLAW_GATEWAY_TOKEN` | (empty) | Authentication token |
+| `MC_APPROVAL_REQUIRE_TEST_EVIDENCE` | `false` | Require latest `test_passed` activity for `review -> done`, unless override reason is logged |
+| `MC_APPROVAL_SOFT_ENFORCEMENT` | `false` | Warn and log approval gate failures instead of rejecting the transition |
 
 ### Settings UI Fields
 

@@ -1,12 +1,121 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { queryOne, run, queryAll } from '@/lib/db';
+import { queryOne, run } from '@/lib/db';
 import { broadcast } from '@/lib/events';
-import { getMissionControlUrl } from '@/lib/config';
+import {
+  getMissionControlUrl,
+  isApprovalSoftEnforcementEnabled,
+  isApprovalTestEvidenceRequired,
+} from '@/lib/config';
 import { UpdateTaskSchema } from '@/lib/validation';
-import type { Task, UpdateTaskRequest, Agent, TaskDeliverable } from '@/lib/types';
+import type { Task, UpdateTaskRequest, Agent } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
+
+type ApprovalGateResult = {
+  deliverables: {
+    required: true;
+    count: number;
+    passed: boolean;
+  };
+  testEvidence: {
+    required: boolean;
+    passed: boolean;
+    overrideUsed: boolean;
+    overrideReason: string | null;
+    latestActivityType: string | null;
+    latestActivityAt: string | null;
+  };
+  policy: {
+    softEnforcement: boolean;
+  };
+};
+
+function insertTaskActivity(params: {
+  taskId: string;
+  agentId?: string;
+  activityType: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}): void {
+  run(
+    `INSERT INTO task_activities (id, task_id, agent_id, activity_type, message, metadata, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      uuidv4(),
+      params.taskId,
+      params.agentId || null,
+      params.activityType,
+      params.message,
+      params.metadata ? JSON.stringify(params.metadata) : null,
+      params.createdAt,
+    ]
+  );
+}
+
+function insertEvent(params: {
+  eventType: string;
+  taskId: string;
+  agentId?: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}): void {
+  run(
+    `INSERT INTO events (id, type, agent_id, task_id, message, metadata, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      uuidv4(),
+      params.eventType,
+      params.agentId || null,
+      params.taskId,
+      params.message,
+      params.metadata ? JSON.stringify(params.metadata) : null,
+      params.createdAt,
+    ]
+  );
+}
+
+function getApprovalGateResult(taskId: string, overrideReason: string | undefined): ApprovalGateResult {
+  const deliverableCountRow = queryOne<{ count: number }>(
+    'SELECT COUNT(*) as count FROM task_deliverables WHERE task_id = ?',
+    [taskId]
+  );
+  const deliverableCount = deliverableCountRow?.count ?? 0;
+  const latestTestActivity = queryOne<{ activity_type: string; created_at: string }>(
+    `SELECT activity_type, created_at
+     FROM task_activities
+     WHERE task_id = ? AND activity_type IN ('test_passed', 'test_failed')
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [taskId]
+  );
+
+  const testEvidenceRequired = isApprovalTestEvidenceRequired();
+  const trimmedOverrideReason = overrideReason?.trim() || null;
+  const hasPassingTestEvidence = latestTestActivity?.activity_type === 'test_passed';
+  const overrideUsed = Boolean(testEvidenceRequired && !hasPassingTestEvidence && trimmedOverrideReason);
+
+  return {
+    deliverables: {
+      required: true,
+      count: deliverableCount,
+      passed: deliverableCount > 0,
+    },
+    testEvidence: {
+      required: testEvidenceRequired,
+      passed: !testEvidenceRequired || hasPassingTestEvidence || overrideUsed,
+      overrideUsed,
+      overrideReason: trimmedOverrideReason,
+      latestActivityType: latestTestActivity?.activity_type ?? null,
+      latestActivityAt: latestTestActivity?.created_at ?? null,
+    },
+    policy: {
+      softEnforcement: isApprovalSoftEnforcementEnabled(),
+    },
+  };
+}
 
 // GET /api/tasks/[id] - Get a single task
 export async function GET(
@@ -65,20 +174,50 @@ export async function PATCH(
     const updates: string[] = [];
     const values: unknown[] = [];
     const now = new Date().toISOString();
+    const isReviewApproval = nextStatus === 'done' && existing.status === 'review';
+    let approvalGateResult: ApprovalGateResult | null = null;
+    let approvalAgent: Pick<Agent, 'is_master'> | null = null;
 
     // Workflow enforcement for agent-initiated approvals
     // If an agent is trying to move review→done, they must be a master agent
     // User-initiated moves (no agent ID) are allowed
-    if (validatedData.status === 'done' && existing.status === 'review' && validatedData.updated_by_agent_id) {
-      const updatingAgent = queryOne<Agent>(
+    if (isReviewApproval && validatedData.updated_by_agent_id) {
+      const updatingAgent = queryOne<Pick<Agent, 'is_master'>>(
         'SELECT is_master FROM agents WHERE id = ?',
         [validatedData.updated_by_agent_id]
       );
+      approvalAgent = updatingAgent ?? null;
 
       if (!updatingAgent || !updatingAgent.is_master) {
         return NextResponse.json(
           { error: 'Forbidden: only the master agent can approve tasks' },
           { status: 403 }
+        );
+      }
+    }
+
+    if (isReviewApproval) {
+      approvalGateResult = getApprovalGateResult(id, validatedData.approval_override_reason);
+      const gateFailures: string[] = [];
+
+      if (!approvalGateResult.deliverables.passed) {
+        gateFailures.push('At least one deliverable is required before approving review -> done.');
+      }
+
+      if (!approvalGateResult.testEvidence.passed) {
+        gateFailures.push(
+          'Successful test evidence is required before approval, or provide approval_override_reason when the policy is enabled.'
+        );
+      }
+
+      if (gateFailures.length > 0 && !approvalGateResult.policy.softEnforcement) {
+        return NextResponse.json(
+          {
+            error: 'Approval gate failed',
+            details: gateFailures,
+            gate: approvalGateResult,
+          },
+          { status: 409 }
         );
       }
     }
@@ -94,6 +233,18 @@ export async function PATCH(
     if (validatedData.priority !== undefined) {
       updates.push('priority = ?');
       values.push(validatedData.priority);
+    }
+    if (validatedData.task_type !== undefined) {
+      updates.push('task_type = ?');
+      values.push(validatedData.task_type);
+    }
+    if (validatedData.estimated_hours !== undefined) {
+      updates.push('estimated_hours = ?');
+      values.push(validatedData.estimated_hours);
+    }
+    if (validatedData.actual_hours !== undefined) {
+      updates.push('actual_hours = ?');
+      values.push(validatedData.actual_hours);
     }
     if (validatedData.due_date !== undefined) {
       updates.push('due_date = ?');
@@ -123,13 +274,71 @@ export async function PATCH(
         shouldDispatch = true;
       }
 
+      const statusMetadata: Record<string, unknown> = {
+        receipt_type: 'task_status_transition',
+        transition: {
+          from: existing.status,
+          to: nextStatus,
+        },
+        updated_by_agent_id: validatedData.updated_by_agent_id ?? null,
+      };
+
+      if (approvalGateResult) {
+        statusMetadata.approval = {
+          approver_agent_id: validatedData.updated_by_agent_id ?? null,
+          approver_is_master: approvalAgent?.is_master ?? null,
+          notes: validatedData.approval_notes ?? null,
+          gate: approvalGateResult,
+        };
+      }
+
+      insertTaskActivity({
+        taskId: id,
+        agentId: validatedData.updated_by_agent_id,
+        activityType: 'status_changed',
+        message: `Task status changed from ${existing.status} to ${nextStatus}`,
+        metadata: statusMetadata,
+        createdAt: now,
+      });
+
       // Log status change event
       const eventType = nextStatus === 'done' ? 'task_completed' : 'task_status_changed';
-      run(
-        `INSERT INTO events (id, type, task_id, message, created_at)
-         VALUES (?, ?, ?, ?, ?)`,
-        [uuidv4(), eventType, id, `Task "${existing.title}" moved to ${nextStatus}`, now]
-      );
+      insertEvent({
+        eventType,
+        taskId: id,
+        agentId: validatedData.updated_by_agent_id,
+        message: `Task "${existing.title}" moved to ${nextStatus}`,
+        metadata: statusMetadata,
+        createdAt: now,
+      });
+
+      if (approvalGateResult) {
+        const approvalMessage = approvalGateResult.testEvidence.overrideUsed
+          ? 'Approval recorded with test-evidence override'
+          : approvalGateResult.policy.softEnforcement && (!approvalGateResult.deliverables.passed || !approvalGateResult.testEvidence.passed)
+            ? 'Approval recorded with soft-enforcement policy warnings'
+            : 'Approval recorded with required evidence';
+
+        insertTaskActivity({
+          taskId: id,
+          agentId: validatedData.updated_by_agent_id,
+          activityType: 'updated',
+          message: approvalMessage,
+          metadata: {
+            receipt_type: 'approval_receipt',
+            task_id: id,
+            transition: {
+              from: existing.status,
+              to: nextStatus,
+            },
+            approver_agent_id: validatedData.updated_by_agent_id ?? null,
+            approver_is_master: approvalAgent?.is_master ?? null,
+            notes: validatedData.approval_notes ?? null,
+            gate: approvalGateResult,
+          },
+          createdAt: now,
+        });
+      }
     }
 
     // Handle assignment change

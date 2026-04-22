@@ -100,14 +100,17 @@ export async function POST(request: NextRequest) {
     const status = validatedData.status || 'inbox';
     
     run(
-      `INSERT INTO tasks (id, title, description, status, priority, assigned_agent_id, created_by_agent_id, workspace_id, business_id, due_date, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tasks (id, title, description, task_type, status, priority, estimated_hours, actual_hours, assigned_agent_id, created_by_agent_id, workspace_id, business_id, due_date, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         validatedData.title,
         validatedData.description || null,
+        validatedData.task_type || 'general',
         status,
         validatedData.priority || 'normal',
+        validatedData.estimated_hours ?? null,
+        validatedData.actual_hours ?? null,
         validatedData.assigned_agent_id || null,
         validatedData.created_by_agent_id || null,
         workspaceId,
