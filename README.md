@@ -27,7 +27,7 @@
   <a href="#-features">Features</a> •
   <a href="#-how-it-works">How It Works</a> •
   <a href="#-configuration">Configuration</a> •
-  <a href="#-contributors">Contributors</a>
+  <a href="#-changelog">Changelog</a>
 </p>
 
 ---
@@ -380,7 +380,7 @@ set NO_PROXY=localhost,127.0.0.1
 docker run -e NO_PROXY=localhost,127.0.0.1 ...
 ```
 
-See [Issue #30](https://github.com/Vlad-PLK/autensa/issues/30) for details.
+See [open issues](https://github.com/Vlad-PLK/autensa/issues) for current status.
 
 ---
 
@@ -396,190 +396,8 @@ See [Issue #30](https://github.com/Vlad-PLK/autensa/issues/30) for details.
 
 ## 👏 Contributors
 
-Autensa is built by a growing community. Thank you to everyone who has contributed!
-
-<table>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/superlowburn">
-        <img src="https://github.com/superlowburn.png?size=80" width="80" height="80" style="border-radius:50%" alt="Steve" /><br />
-        <sub><b>Steve</b></sub>
-      </a><br />
-      <sub>Device Identity</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/rchristman89">
-        <img src="https://github.com/rchristman89.png?size=80" width="80" height="80" style="border-radius:50%" alt="Ryan Christman" /><br />
-        <sub><b>Ryan Christman</b></sub>
-      </a><br />
-      <sub>Port Configuration</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/nicozefrench">
-        <img src="https://github.com/nicozefrench.png?size=80" width="80" height="80" style="border-radius:50%" alt="nicozefrench" /><br />
-        <sub><b>nicozefrench</b></sub>
-      </a><br />
-      <sub>ARIA Hooks</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/misterdas">
-        <img src="https://github.com/misterdas.png?size=80" width="80" height="80" style="border-radius:50%" alt="GOPAL" /><br />
-        <sub><b>GOPAL</b></sub>
-      </a><br />
-      <sub>Node v25 Support</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/joralemarti">
-        <img src="https://github.com/joralemarti.png?size=80" width="80" height="80" style="border-radius:50%" alt="Jorge Martinez" /><br />
-        <sub><b>Jorge Martinez</b></sub>
-      </a><br />
-      <sub>Orchestration</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/niks918">
-        <img src="https://github.com/niks918.png?size=80" width="80" height="80" style="border-radius:50%" alt="Nik" /><br />
-        <sub><b>Nik</b></sub>
-      </a><br />
-      <sub>Planning & Dispatch</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/gmb9000">
-        <img src="https://github.com/gmb9000.png?size=80" width="80" height="80" style="border-radius:50%" alt="Michael G" /><br />
-        <sub><b>Michael G</b></sub>
-      </a><br />
-      <sub>Usage Dashboard</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/Z8Medina">
-        <img src="https://github.com/Z8Medina.png?size=80" width="80" height="80" style="border-radius:50%" alt="Z8Medina" /><br />
-        <sub><b>Z8Medina</b></sub>
-      </a><br />
-      <sub>Metabase Integration</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/markphelps">
-        <img src="https://github.com/markphelps.png?size=80" width="80" height="80" style="border-radius:50%" alt="Mark Phelps" /><br />
-        <sub><b>Mark Phelps</b></sub>
-      </a><br />
-      <sub>Gateway Agent Discovery 💡</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/muneale">
-        <img src="https://github.com/muneale.png?size=80" width="80" height="80" style="border-radius:50%" alt="Alessio" /><br />
-        <sub><b>Alessio</b></sub>
-      </a><br />
-      <sub>Docker Support</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/JamesTsetsekas">
-        <img src="https://github.com/JamesTsetsekas.png?size=80" width="80" height="80" style="border-radius:50%" alt="James Tsetsekas" /><br />
-        <sub><b>James Tsetsekas</b></sub>
-      </a><br />
-      <sub>Planning Flow Fixes</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/nice-and-precise">
-        <img src="https://github.com/nice-and-precise.png?size=80" width="80" height="80" style="border-radius:50%" alt="nice-and-precise" /><br />
-        <sub><b>nice-and-precise</b></sub>
-      </a><br />
-      <sub>Agent Protocol Docs</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/JamesCao2048">
-        <img src="https://github.com/JamesCao2048.png?size=80" width="80" height="80" style="border-radius:50%" alt="JamesCao2048" /><br />
-        <sub><b>JamesCao2048</b></sub>
-      </a><br />
-      <sub>Task Creation Fix</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/davetha">
-        <img src="https://github.com/davetha.png?size=80" width="80" height="80" style="border-radius:50%" alt="davetha" /><br />
-        <sub><b>davetha</b></sub>
-      </a><br />
-      <sub>Force-Dynamic & Model Discovery</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/pkgaiassistant-droid">
-        <img src="https://github.com/pkgaiassistant-droid.png?size=80" width="80" height="80" style="border-radius:50%" alt="pkgaiassistant-droid" /><br />
-        <sub><b>pkgaiassistant-droid</b></sub>
-      </a><br />
-      <sub>Activity Dashboard & Mobile UX</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/Coder-maxer">
-        <img src="https://github.com/Coder-maxer.png?size=80" width="80" height="80" style="border-radius:50%" alt="Coder-maxer" /><br />
-        <sub><b>Coder-maxer</b></sub>
-      </a><br />
-      <sub>Static Route Fix</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/grunya-openclaw">
-        <img src="https://github.com/grunya-openclaw.png?size=80" width="80" height="80" style="border-radius:50%" alt="grunya-openclaw" /><br />
-        <sub><b>grunya-openclaw</b></sub>
-      </a><br />
-      <sub>Dispatch & Proxy Bug Reports</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/ilakskill">
-        <img src="https://github.com/ilakskill.png?size=80" width="80" height="80" style="border-radius:50%" alt="ilakskill" /><br />
-        <sub><b>ilakskill</b></sub>
-      </a><br />
-      <sub>Dispatch Recovery Design</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/plutusaisystem-cmyk">
-        <img src="https://github.com/plutusaisystem-cmyk.png?size=80" width="80" height="80" style="border-radius:50%" alt="plutusaisystem-cmyk" /><br />
-        <sub><b>plutusaisystem-cmyk</b></sub>
-      </a><br />
-      <sub>Agent Daemon & Fleet View</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/nithis4th">
-        <img src="https://github.com/nithis4th.png?size=80" width="80" height="80" style="border-radius:50%" alt="nithis4th" /><br />
-        <sub><b>nithis4th</b></sub>
-      </a><br />
-      <sub>2nd Brain Knowledge Base</sub>
-    </td>
-  </tr>
-  <tr>
-    <td align="center">
-      <a href="https://github.com/davidpellerin">
-        <img src="https://github.com/davidpellerin.png?size=80" width="80" height="80" style="border-radius:50%" alt="davidpellerin" /><br />
-        <sub><b>davidpellerin</b></sub>
-      </a><br />
-      <sub>Dynamic Agent Config</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/tmchow">
-        <img src="https://github.com/tmchow.png?size=80" width="80" height="80" style="border-radius:50%" alt="tmchow" /><br />
-        <sub><b>tmchow</b></sub>
-      </a><br />
-      <sub>Agent Import Improvements</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/xiaomiusa87">
-        <img src="https://github.com/xiaomiusa87.png?size=80" width="80" height="80" style="border-radius:50%" alt="xiaomiusa87" /><br />
-        <sub><b>xiaomiusa87</b></sub>
-      </a><br />
-      <sub>Session Key Bug Report</sub>
-    </td>
-    <td align="center">
-      <a href="https://github.com/lutherbot-ai">
-        <img src="https://github.com/lutherbot-ai.png?size=80" width="80" height="80" style="border-radius:50%" alt="lutherbot-ai" /><br />
-        <sub><b>lutherbot-ai</b></sub>
-      </a><br />
-      <sub>Security Audit</sub>
-    </td>
-  </tr>
-</table>
+Contributors are tracked directly by GitHub for this repository:
+https://github.com/Vlad-PLK/autensa/graphs/contributors
 
 ---
 
