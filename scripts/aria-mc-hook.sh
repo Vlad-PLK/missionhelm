@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────────
-# ARIA → Mission Control Hook
-# One-liner wrapper for ARIA to notify MC when agents spawn/finish.
+# ARIA → La Citadel Hook
+# One-liner wrapper for ARIA to notify the control plane when agents spawn/finish.
 #
 # Usage:
 #   aria-mc-hook.sh start <label> <task-title>
@@ -27,10 +27,10 @@
 #   aria-mc-hook.sh done researcher-1900 "$TASK_ID" "Found 6 viable ideas"
 #   aria-mc-hook.sh error coder-fix-bug "$TASK_ID" "Build failed"
 #
-# Design: Fails silently if MC is down (never blocks ARIA).
+# Design: Fails silently if La Citadel is down (never blocks ARIA).
 # ─────────────────────────────────────────────────────────────────
 
-MC_URL="${MC_URL:-http://localhost:3000}"
+MC_URL="${LA_CITADEL_URL:-${MISSION_CONTROL_URL:-${MC_URL:-http://localhost:4000}}}"
 BRIDGE="$(dirname "$0")/mc-bridge.py"
 TIMEOUT=5
 
@@ -76,7 +76,7 @@ case "$CMD" in
       AGENT="$LABEL"
     fi
 
-    # Fail silently if MC is down
+    # Fail silently if La Citadel is down
     if ! mc_alive; then
       exit 0
     fi
@@ -156,7 +156,7 @@ case "$CMD" in
     ;;
 
   *)
-    echo "ARIA → Mission Control Hook"
+    echo "ARIA → La Citadel Hook"
     echo ""
     echo "Usage:"
     echo "  $0 start   <label> <task-title>           → returns task_id"

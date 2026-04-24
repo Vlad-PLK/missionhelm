@@ -1,14 +1,15 @@
 /**
  * Settings Page
- * Configure Mission Control paths, URLs, and preferences
+ * Configure La Citadel paths, URLs, and preferences
  */
 
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Settings, Save, RotateCcw, Home, FolderOpen, Link as LinkIcon } from 'lucide-react';
+import { Settings, Save, RotateCcw, FolderOpen, Link as LinkIcon } from 'lucide-react';
 import { getConfig, updateConfig, resetConfig, type MissionControlConfig } from '@/lib/config';
+import { APP_DISPLAY_NAME, APP_SLUG, LEGACY_APP_CONFIG_KEY } from '@/lib/branding';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -70,7 +71,7 @@ export default function SettingsPage() {
             <button
               onClick={() => router.push('/')}
               className="p-2 hover:bg-mc-bg-tertiary rounded text-mc-text-secondary"
-              title="Back to Mission Control"
+              title={`Back to ${APP_DISPLAY_NAME}`}
             >
               ← Back
             </button>
@@ -121,7 +122,7 @@ export default function SettingsPage() {
             <h2 className="text-xl font-semibold text-mc-text">Workspace Paths</h2>
           </div>
           <p className="text-sm text-mc-text-secondary mb-4">
-            Configure where Mission Control stores projects and deliverables.
+            Configure where {APP_DISPLAY_NAME} stores projects and deliverables.
           </p>
 
           <div className="space-y-4">
@@ -137,7 +138,7 @@ export default function SettingsPage() {
                 className="w-full px-4 py-2 bg-mc-bg border border-mc-border rounded text-mc-text focus:border-mc-accent focus:outline-none"
               />
               <p className="text-xs text-mc-text-secondary mt-1">
-                Base directory for all Mission Control files. Use ~ for home directory.
+                Base directory for all {APP_DISPLAY_NAME} files. Use ~ for home directory.
               </p>
             </div>
 
@@ -165,7 +166,7 @@ export default function SettingsPage() {
                 type="text"
                 value={config.defaultProjectName}
                 onChange={(e) => handleChange('defaultProjectName', e.target.value)}
-                placeholder="mission-control"
+                placeholder={APP_SLUG}
                 className="w-full px-4 py-2 bg-mc-bg border border-mc-border rounded text-mc-text focus:border-mc-accent focus:outline-none"
               />
               <p className="text-xs text-mc-text-secondary mt-1">
@@ -182,13 +183,13 @@ export default function SettingsPage() {
             <h2 className="text-xl font-semibold text-mc-text">API Configuration</h2>
           </div>
           <p className="text-sm text-mc-text-secondary mb-4">
-            Configure Mission Control API URL for agent orchestration.
+            Configure the {APP_DISPLAY_NAME} API URL for agent orchestration.
           </p>
 
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-mc-text mb-2">
-                Mission Control URL
+                {APP_DISPLAY_NAME} URL
               </label>
               <input
                 type="text"
@@ -198,7 +199,7 @@ export default function SettingsPage() {
                 className="w-full px-4 py-2 bg-mc-bg border border-mc-border rounded text-mc-text focus:border-mc-accent focus:outline-none"
               />
               <p className="text-xs text-mc-text-secondary mt-1">
-                URL where Mission Control is running. Auto-detected by default. Change for remote access.
+                URL where {APP_DISPLAY_NAME} is running. Auto-detected by default. Change for remote access.
               </p>
             </div>
           </div>
@@ -213,14 +214,14 @@ export default function SettingsPage() {
             Some settings are also configurable via environment variables in <code className="px-2 py-1 bg-mc-bg rounded">.env.local</code>:
           </p>
           <ul className="text-sm text-blue-300 space-y-1 ml-4 list-disc">
-            <li><code>MISSION_CONTROL_URL</code> - API URL override</li>
-            <li><code>WORKSPACE_BASE_PATH</code> - Base workspace directory</li>
-            <li><code>PROJECTS_PATH</code> - Projects directory</li>
-            <li><code>OPENCLAW_GATEWAY_URL</code> - Gateway WebSocket URL</li>
-            <li><code>OPENCLAW_GATEWAY_TOKEN</code> - Gateway auth token</li>
+            <li><code>LA_CITADEL_URL</code> or legacy <code>MISSION_CONTROL_URL</code> - API URL override</li>
+            <li><code>LA_CITADEL_WORKSPACE_BASE_PATH</code> or legacy <code>WORKSPACE_BASE_PATH</code> - Base workspace directory</li>
+            <li><code>LA_CITADEL_PROJECTS_PATH</code> or legacy <code>PROJECTS_PATH</code> - Projects directory</li>
+            <li><code>LA_CITADEL_OPENCLAW_GATEWAY_URL</code> or legacy <code>OPENCLAW_GATEWAY_URL</code> - Gateway WebSocket URL</li>
+            <li><code>LA_CITADEL_OPENCLAW_GATEWAY_TOKEN</code> or legacy <code>OPENCLAW_GATEWAY_TOKEN</code> - Gateway auth token</li>
           </ul>
           <p className="text-xs text-blue-400 mt-3">
-            Environment variables take precedence over UI settings for server-side operations.
+            Environment variables take precedence over UI settings for server-side operations. Browser settings are stored under <code>{APP_SLUG}-config</code> with the legacy <code>{LEGACY_APP_CONFIG_KEY}</code> key kept in sync.
           </p>
         </section>
       </div>

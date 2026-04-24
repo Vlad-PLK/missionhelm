@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { APP_DISPLAY_NAME } from '@/lib/branding';
 
 export default function DemoBanner() {
   const [isDemo, setIsDemo] = useState(false);
@@ -24,7 +25,7 @@ export default function DemoBanner() {
         rel="noopener noreferrer"
         className="ml-3 underline hover:text-blue-200 transition-colors"
       >
-        Get Mission Control →
+        Get {APP_DISPLAY_NAME} →
       </a>
     </div>
   );

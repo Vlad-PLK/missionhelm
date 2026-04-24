@@ -3,6 +3,7 @@ import './globals.css';
 import { JetBrains_Mono } from 'next/font/google';
 import DemoBanner from '@/components/DemoBanner';
 import { Toaster } from 'sonner';
+import { APP_DISPLAY_NAME } from '@/lib/branding';
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
@@ -12,7 +13,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Mission Control',
+  title: APP_DISPLAY_NAME,
   description: 'AI Agent Orchestration Dashboard',
   icons: {
     icon: '/favicon.svg',

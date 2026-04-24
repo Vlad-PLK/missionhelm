@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-ARIA ↔ Mission Control Bridge
-Syncs agent activity with Mission Control via its REST API.
+ARIA ↔ La Citadel Bridge
+Syncs agent activity with La Citadel via its REST API.
 
 Usage:
   mc-bridge.py agent-start --agent "Researcher" --task "Research Axe 2" [--label "researcher-1900"]
@@ -23,10 +23,15 @@ import urllib.error
 # Configuration
 # ---------------------------------------------------------------------------
 
-BASE_URL = os.environ.get("MC_URL", "http://localhost:3000")
+BASE_URL = (
+    os.environ.get("LA_CITADEL_URL")
+    or os.environ.get("MISSION_CONTROL_URL")
+    or os.environ.get("MC_URL")
+    or "http://localhost:4000"
+)
 WORKSPACE_ID = os.environ.get("MC_WORKSPACE", "default")
 
-# Label prefix → Mission Control agent name
+# Label prefix → La Citadel agent name
 LABEL_MAP = [
     # (prefix_list, agent_name)
     (["researcher"],                       "Researcher"),
@@ -46,7 +51,7 @@ LABEL_MAP = [
 # ---------------------------------------------------------------------------
 
 def _request(method: str, path: str, body: dict | None = None, quiet: bool = False) -> dict | list | None:
-    """Make an HTTP request to Mission Control. Returns parsed JSON or None on error."""
+    """Make an HTTP request to La Citadel. Returns parsed JSON or None on error."""
     url = f"{BASE_URL}{path}"
     data = json.dumps(body).encode() if body else None
     req = urllib.request.Request(
@@ -66,7 +71,7 @@ def _request(method: str, path: str, body: dict | None = None, quiet: bool = Fal
         return None
     except urllib.error.URLError as e:
         if not quiet:
-            print(f"⚠️  Mission Control unreachable ({BASE_URL}): {e.reason}", file=sys.stderr)
+            print(f"⚠️  La Citadel unreachable ({BASE_URL}): {e.reason}", file=sys.stderr)
         return None
     except Exception as e:
         if not quiet:
@@ -98,7 +103,7 @@ def get_agents() -> list:
 
 
 def resolve_agent_name(label: str) -> str | None:
-    """Map a Clawdbot session label to a Mission Control agent name."""
+    """Map a Clawdbot session label to a La Citadel agent name."""
     label_lower = label.lower()
     for prefixes, agent_name in LABEL_MAP:
         for prefix in prefixes:
@@ -108,7 +113,7 @@ def resolve_agent_name(label: str) -> str | None:
 
 
 def find_agent(name: str) -> dict | None:
-    """Find an agent by name (case-insensitive) in Mission Control."""
+    """Find an agent by name (case-insensitive) in La Citadel."""
     agents = get_agents()
     name_lower = name.lower()
     for a in agents:
@@ -271,7 +276,7 @@ def cmd_status(args):
     # Agents
     agents = get_agents()
     if not agents:
-        print("⚠️  No agents found (is Mission Control running?)")
+        print("⚠️  No agents found (is La Citadel running?)")
         return
 
     print("── Agents ──────────────────────────────────")
@@ -337,7 +342,7 @@ def cmd_list_agents(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="ARIA ↔ Mission Control Bridge",
+        description="ARIA ↔ La Citadel Bridge",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

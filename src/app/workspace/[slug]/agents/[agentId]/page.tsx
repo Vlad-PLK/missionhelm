@@ -8,6 +8,7 @@ import { Header } from '@/components/Header';
 import { TaskModal } from '@/components/TaskModal';
 import { WorkspaceSubnav } from '@/components/WorkspaceSubnav';
 import type { Agent, OpenClawSession, Task, Workspace } from '@/lib/types';
+import { APP_RUNTIME_CHANNEL } from '@/lib/branding';
 
 export default function WorkspaceAgentDetailPage() {
   const params = useParams();
@@ -184,7 +185,7 @@ export default function WorkspaceAgentDetailPage() {
               {sessionState?.session && (
                 <div className="rounded-lg border border-mc-border bg-mc-bg px-3 py-3 text-sm space-y-1">
                   <div><span className="text-mc-text-secondary">Session:</span> {sessionState.session.openclaw_session_id}</div>
-                  <div><span className="text-mc-text-secondary">Channel:</span> {sessionState.session.channel || 'mission-control'}</div>
+                  <div><span className="text-mc-text-secondary">Channel:</span> {sessionState.session.channel || APP_RUNTIME_CHANNEL}</div>
                 </div>
               )}
               <button onClick={handleSessionToggle} disabled={!!sessionAction} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-mc-border bg-mc-bg text-sm text-mc-text">

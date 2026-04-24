@@ -7,6 +7,7 @@ import { Zap, Settings, ChevronLeft, LayoutGrid, Menu, Plus, X } from 'lucide-re
 import { useMissionControl } from '@/lib/store';
 import { format } from 'date-fns';
 import type { Workspace } from '@/lib/types';
+import { APP_DISPLAY_NAME } from '@/lib/branding';
 
 interface HeaderProps {
   workspace?: Workspace;
@@ -70,7 +71,7 @@ export function Header({ workspace, statsOverride, onCreateTask }: HeaderProps) 
         <div className="flex items-center gap-2">
           <Zap className="w-5 h-5 text-mc-accent-cyan" />
           <span className="font-semibold text-mc-text uppercase tracking-wider text-sm hidden sm:block">
-            Mission Control
+            {APP_DISPLAY_NAME}
           </span>
         </div>
 

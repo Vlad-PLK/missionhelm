@@ -38,19 +38,21 @@ Edit `.env.local` with your configuration:
 
 ```bash
 # Database
-DATABASE_PATH=./missionhelm.db
+LA_CITADEL_DATABASE_PATH=./la-citadel.db
 
 # OpenClaw Gateway
-OPENCLAW_GATEWAY_URL=ws://127.0.0.1:18789
-OPENCLAW_GATEWAY_TOKEN=your-token-here
+LA_CITADEL_OPENCLAW_GATEWAY_URL=ws://127.0.0.1:18789
+LA_CITADEL_OPENCLAW_GATEWAY_TOKEN=your-token-here
 
 # Workspace Paths
-WORKSPACE_BASE_PATH=~/Documents/Shared
-PROJECTS_PATH=~/Documents/Shared/projects
+LA_CITADEL_WORKSPACE_BASE_PATH=~/Documents/Shared
+LA_CITADEL_PROJECTS_PATH=~/Documents/Shared/projects
 
 # API URL (auto-detected if not set)
-MISSION_CONTROL_URL=http://localhost:4000
+LA_CITADEL_URL=http://localhost:4000
 ```
+
+Legacy aliases remain supported for backward compatibility: `DATABASE_PATH`, `OPENCLAW_GATEWAY_URL`, `OPENCLAW_GATEWAY_TOKEN`, `WORKSPACE_BASE_PATH`, `PROJECTS_PATH`, and `MISSION_CONTROL_URL`.
 
 ### 4. Initialize Database
 
@@ -84,10 +86,10 @@ Best for:
 
 Variables in `.env.local`:
 ```bash
-WORKSPACE_BASE_PATH=~/Documents/Shared
-PROJECTS_PATH=~/Documents/Shared/projects
-MISSION_CONTROL_URL=http://your-server-ip:4000
-OPENCLAW_GATEWAY_URL=ws://127.0.0.1:18789
+LA_CITADEL_WORKSPACE_BASE_PATH=~/Documents/Shared
+LA_CITADEL_PROJECTS_PATH=~/Documents/Shared/projects
+LA_CITADEL_URL=http://your-server-ip:4000
+LA_CITADEL_OPENCLAW_GATEWAY_URL=ws://127.0.0.1:18789
 ```
 
 ### Method 2: Settings UI
@@ -127,8 +129,8 @@ La Citadel organizes files in a structured workspace:
 
 **Via Environment Variables:**
 ```bash
-WORKSPACE_BASE_PATH=~/Documents/Shared
-PROJECTS_PATH=~/Documents/Shared/projects
+LA_CITADEL_WORKSPACE_BASE_PATH=~/Documents/Shared
+LA_CITADEL_PROJECTS_PATH=~/Documents/Shared/projects
 ```
 
 **Via Settings UI:**
@@ -149,7 +151,7 @@ PROJECTS_PATH=~/Documents/Shared/projects
 
 ```bash
 # .env.local
-OPENCLAW_GATEWAY_URL=ws://127.0.0.1:18789
+LA_CITADEL_OPENCLAW_GATEWAY_URL=ws://127.0.0.1:18789
 ```
 
 No token required for local connections.
@@ -158,8 +160,8 @@ No token required for local connections.
 
 ```bash
 # .env.local
-OPENCLAW_GATEWAY_URL=wss://your-machine.tail12345.ts.net
-OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
+LA_CITADEL_OPENCLAW_GATEWAY_URL=wss://your-machine.tail12345.ts.net
+LA_CITADEL_OPENCLAW_GATEWAY_TOKEN=$(openssl rand -hex 32)
 ```
 
 **Generate a secure token:**
@@ -186,12 +188,12 @@ Create `.env.production.local`:
 
 ```bash
 NODE_ENV=production
-DATABASE_PATH=/var/lib/missionhelm/missionhelm.db
-WORKSPACE_BASE_PATH=/var/lib/missionhelm/workspace
-PROJECTS_PATH=/var/lib/missionhelm/workspace/projects
-MISSION_CONTROL_URL=https://missionhelm.yourdomain.com
-OPENCLAW_GATEWAY_URL=wss://gateway.yourdomain.com
-OPENCLAW_GATEWAY_TOKEN=your-production-token
+LA_CITADEL_DATABASE_PATH=/var/lib/missionhelm/missionhelm.db
+LA_CITADEL_WORKSPACE_BASE_PATH=/var/lib/missionhelm/workspace
+LA_CITADEL_PROJECTS_PATH=/var/lib/missionhelm/workspace/projects
+LA_CITADEL_URL=https://missionhelm.yourdomain.com
+LA_CITADEL_OPENCLAW_GATEWAY_URL=wss://gateway.yourdomain.com
+LA_CITADEL_OPENCLAW_GATEWAY_TOKEN=your-production-token
 ```
 
 ### Database Backups

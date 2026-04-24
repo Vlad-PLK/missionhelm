@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Activity, Bot, FolderOpen, Plus, Radio, Settings, ShieldAlert, TestTube2, UploadCloud } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { Agent, Event, OpenClawSession, Task, Workspace } from '@/lib/types';
+import { APP_DISPLAY_NAME } from '@/lib/branding';
 
 interface WorkspaceCommandCenterProps {
   workspace: Workspace;
@@ -73,7 +74,7 @@ export function WorkspaceCommandCenter({
     warningItems.push({
       id: 'gateway-offline',
       label: 'Gateway offline',
-      detail: openClawStatus?.error || 'Mission Control could not reach OpenClaw.',
+      detail: openClawStatus?.error || `${APP_DISPLAY_NAME} could not reach OpenClaw.`,
       tone: 'critical',
     });
   }

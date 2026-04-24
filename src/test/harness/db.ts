@@ -2,14 +2,15 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import Database from 'better-sqlite3';
+import { APP_DB_FILENAME, APP_SLUG } from '@/lib/branding';
 
 type LegacyDbOptions = {
   markAllMigrationsApplied?: boolean;
 };
 
-export function createTempDbPath(name = 'mission-control'): { dir: string; dbPath: string } {
+export function createTempDbPath(name = APP_SLUG): { dir: string; dbPath: string } {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), `${name}-`));
-  return { dir, dbPath: path.join(dir, 'mission-control.db') };
+  return { dir, dbPath: path.join(dir, APP_DB_FILENAME) };
 }
 
 export function createLegacyPlanningDb(dbPath: string, options: LegacyDbOptions = {}): void {

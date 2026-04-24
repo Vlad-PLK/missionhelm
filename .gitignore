@@ -60,3 +60,6 @@ workspaces/
 *.log
 AGENTS.local.md
 AGENTS.md
+
+# local launch-kit content (keep out of repo)
+docs/linkedin/

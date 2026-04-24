@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getDbStartupStatus } from '@/lib/db';
+import { APP_DISPLAY_NAME } from '@/lib/branding';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,7 @@ export async function GET() {
         : [
             'Inspect the preflight receipt for missing tables or columns.',
             'Fix any filesystem or SQLite permission issues blocking additive repair.',
-            'Restart Mission Control after the database is writable again.',
+            `Restart ${APP_DISPLAY_NAME} after the database is writable again.`,
           ],
     },
     { status: httpStatus }

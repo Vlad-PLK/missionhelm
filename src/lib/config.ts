@@ -1,35 +1,43 @@
 /**
  * Configuration Management
- * 
- * Handles user-configurable settings for Mission Control.
+ *
+ * Handles user-configurable settings for La Citadel.
  * Settings are stored in localStorage for client-side access.
- * 
+ *
  * NEVER commit hardcoded IPs, paths, or sensitive data!
  */
+
+import {
+  APP_SLUG,
+  clearStoredConfig,
+  getAppUrl,
+  getProjectsPathEnv,
+  getWorkspaceBasePathEnv,
+  loadStoredConfig,
+  saveStoredConfig,
+} from './branding';
 
 export interface MissionControlConfig {
   // Workspace settings
   workspaceBasePath: string; // e.g., ~/Documents/Shared
   projectsPath: string; // e.g., ${workspaceBasePath}/projects
   
-  // Mission Control API URL (for orchestration)
+  // La Citadel API URL (for orchestration)
   missionControlUrl: string; // Auto-detected or manually set
   
   // OpenClaw Gateway settings (these come from .env on server)
   // Client-side only needs to know if it's configured
   
   // Project defaults
-  defaultProjectName: string; // 'mission-control' or custom
+  defaultProjectName: string; // 'la-citadel' or custom
 }
 
 const DEFAULT_CONFIG: MissionControlConfig = {
   workspaceBasePath: '~/Documents/Shared',
   projectsPath: '~/Documents/Shared/projects',
   missionControlUrl: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4000',
-  defaultProjectName: 'mission-control',
+  defaultProjectName: APP_SLUG,
 };
-
-const CONFIG_KEY = 'mission-control-config';
 
 /**
  * Get current configuration
@@ -41,7 +49,7 @@ export function getConfig(): MissionControlConfig {
   }
 
   try {
-    const stored = localStorage.getItem(CONFIG_KEY);
+    const stored = loadStoredConfig(localStorage);
     if (stored) {
       const parsed = JSON.parse(stored);
       return { ...DEFAULT_CONFIG, ...parsed };
@@ -76,12 +84,12 @@ export function updateConfig(updates: Partial<MissionControlConfig>): void {
     try {
       new URL(updates.missionControlUrl);
     } catch {
-      throw new Error('Invalid Mission Control URL');
+      throw new Error('Invalid La Citadel URL');
     }
   }
 
   try {
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(updated));
+    saveStoredConfig(localStorage, JSON.stringify(updated));
   } catch (error) {
     console.error('Failed to save config:', error);
     throw new Error('Failed to save configuration');
@@ -96,7 +104,7 @@ export function resetConfig(): void {
     throw new Error('Cannot reset config on server side');
   }
 
-  localStorage.removeItem(CONFIG_KEY);
+  clearStoredConfig(localStorage);
 }
 
 /**
@@ -113,13 +121,13 @@ export function expandPath(path: string): string {
 }
 
 /**
- * Get Mission Control URL for API calls
+ * Get La Citadel URL for API calls
  * Used by orchestration module and other server-side modules
  */
 export function getMissionControlUrl(): string {
   // Server-side: use env var or auto-detect
   if (typeof window === 'undefined') {
-    return process.env.MISSION_CONTROL_URL || 'http://localhost:4000';
+    return getAppUrl();
   }
 
   // Client-side: use config
@@ -152,7 +160,7 @@ export function getWorkspaceBasePath(): string {
   }
 
   // Server-side: check env var first, then default
-  return process.env.WORKSPACE_BASE_PATH || '~/Documents/Shared';
+  return getWorkspaceBasePathEnv();
 }
 
 /**
@@ -165,7 +173,7 @@ export function getProjectsPath(): string {
   }
 
   // Server-side: check env var first, then default
-  return process.env.PROJECTS_PATH || '~/Documents/Shared/projects';
+  return getProjectsPathEnv();
 }
 
 /**

@@ -1,18 +1,34 @@
 #!/usr/bin/env node
 /**
  * Demo Seed Script — Creates a realistic workspace with agents and tasks
- * for the Mission Control live demo.
- * 
+ * for the La Citadel live demo.
+ *
  * Usage: node scripts/demo-seed.js [--db path/to/db]
  */
 
 const Database = require('better-sqlite3');
 const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs');
+
+function resolveDbPath() {
+  const configured = process.env.LA_CITADEL_DATABASE_PATH || process.env.DATABASE_PATH;
+  if (configured) {
+    return configured;
+  }
+
+  const canonical = path.join(process.cwd(), 'la-citadel.db');
+  if (fs.existsSync(canonical)) {
+    return canonical;
+  }
+
+  const legacy = path.join(process.cwd(), 'mission-control.db');
+  return fs.existsSync(legacy) ? legacy : canonical;
+}
 
 const dbPath = process.argv.includes('--db') 
   ? process.argv[process.argv.indexOf('--db') + 1]
-  : path.join(process.cwd(), 'mission-control.db');
+  : resolveDbPath();
 
 console.log(`[Demo Seed] Database: ${dbPath}`);
 

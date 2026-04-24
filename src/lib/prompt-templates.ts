@@ -2,6 +2,7 @@ import { queryOne } from '@/lib/db';
 import type { Task, Agent, Workspace } from '@/lib/types';
 import { getMissionControlUrl, getProjectsPath } from '@/lib/config';
 import { isCodingTask } from './opencode';
+import { APP_DISPLAY_NAME } from './branding';
 
 export interface DispatchContext {
   task: Task;
@@ -146,7 +147,9 @@ export function buildDispatchPrompt(context: DispatchContext): string {
   parts.push('');
 
   const isCoding = isCodingTask(task.title, task.description || '');
-  const opencodeModel = 'openai/gpt-5.4';
+  const opencodeModel = (process.env.OPENCODE_CODING_MODEL || 'openai/gpt-5.3').trim();
+  const opencodeFallbackModel = (process.env.OPENCODE_CODING_FALLBACK_MODEL || '').trim();
+  const opencodeBinary = '/home/vlad-plk/.npm-global/bin/opencode';
   const planningDelimiter = promptDelimiter(task.id, 'PLANNING_PROMPT');
   const buildDelimiter = promptDelimiter(task.id, 'BUILD_PROMPT');
   
@@ -154,11 +157,17 @@ export function buildDispatchPrompt(context: DispatchContext): string {
     parts.push('**🤖 OPENCODE EXECUTION (MANDATORY FOR CODING TASKS):**');
     parts.push('');
     parts.push('This is a CODING TASK. You MUST use OpenCode to execute it.');
-    parts.push(`**Model:** ${opencodeModel} (always use this model)`);
+    parts.push(`**Primary model:** ${opencodeModel}`);
+    if (opencodeFallbackModel) {
+      parts.push(`**Fallback model:** ${opencodeFallbackModel}`);
+      parts.push('If primary model fails with quota/billing/entitlement error, retry once with the fallback model and continue.');
+    }
+    parts.push(`**OpenCode Binary (absolute path):** ${opencodeBinary}`);
+    parts.push(`**Execution authorization:** You are explicitly authorized to run required shell/exec commands for this task (OpenCode + ${APP_DISPLAY_NAME} task API calls). Do NOT request an extra permission round-trip.`);
     parts.push('');
     parts.push('**Phase 1 - PLANNING (always start here):**');
     parts.push('```bash');
-    parts.push(`cd ${quotedCodebaseDir} && opencode run -m ${opencodeModel} "$(cat <<'${planningDelimiter}'`);
+    parts.push(`cd ${quotedCodebaseDir} && ${opencodeBinary} run -m ${opencodeModel} "$(cat <<'${planningDelimiter}'`);
     parts.push('Planning mode:');
     parts.push(`Task: ${task.title}`);
     if (task.description) {
@@ -182,7 +191,7 @@ export function buildDispatchPrompt(context: DispatchContext): string {
     parts.push('');
     parts.push('**Phase 2 - BUILD (after planning):**');
     parts.push('```bash');
-    parts.push(`cd ${quotedCodebaseDir} && opencode run -m ${opencodeModel} "$(cat <<'${buildDelimiter}'`);
+    parts.push(`cd ${quotedCodebaseDir} && ${opencodeBinary} run -m ${opencodeModel} "$(cat <<'${buildDelimiter}'`);
     parts.push('Build mode:');
     parts.push(`Task: ${task.title}`);
     if (task.description) {
@@ -212,6 +221,9 @@ export function buildDispatchPrompt(context: DispatchContext): string {
     parts.push('');
     parts.push('**ERROR HANDLING:**');
     parts.push('If OpenCode fails:');
+    if (opencodeFallbackModel) {
+      parts.push(`- If the error is quota/billing/entitlement on ${opencodeModel}, retry once with ${opencodeFallbackModel}`);
+    }
     parts.push('- Report FAILURE IMMEDIATELY to the orchestrator');
     parts.push('- Do NOT attempt to do the work yourself as fallback');
     parts.push('- OpenCode is the ONLY way to complete coding tasks');

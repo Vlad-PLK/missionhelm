@@ -4,6 +4,7 @@ import { EventEmitter } from 'events';
 import type { OpenClawMessage, OpenClawSessionInfo } from '../types';
 import { loadOrCreateDeviceIdentity, signDevicePayload, buildDeviceAuthPayload, publicKeyRawBase64Url } from './device-identity';
 import { createHash } from 'crypto';
+import { getOpenClawGatewayToken, getOpenClawGatewayUrl } from '../branding';
 
 // Types for gateway model discovery (matches OpenClaw models.list response)
 export interface GatewayModelChoice {
@@ -27,8 +28,8 @@ export interface GatewayConfigSnapshot {
   };
 }
 
-const GATEWAY_URL = process.env.OPENCLAW_GATEWAY_URL || 'ws://127.0.0.1:18789';
-const GATEWAY_TOKEN = process.env.OPENCLAW_GATEWAY_TOKEN || '';
+const GATEWAY_URL = getOpenClawGatewayUrl();
+const GATEWAY_TOKEN = getOpenClawGatewayToken();
 
 // Global deduplication cache that persists across module reloads in Next.js dev
 // Use globalThis to ensure it's shared across all instances

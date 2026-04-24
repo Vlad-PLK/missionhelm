@@ -174,6 +174,7 @@ function ReviewTaskCard({ task, workspaceSlug, onTaskUpdated }: { task: ReviewTa
   const [deliverables, setDeliverables] = useState<TaskDeliverable[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const loadCard = useCallback(async () => {
     try {
@@ -199,6 +200,7 @@ function ReviewTaskCard({ task, workspaceSlug, onTaskUpdated }: { task: ReviewTa
   const latestTest = activities.find((activity) => activity.activity_type === 'test_passed' || activity.activity_type === 'test_failed');
 
   const updateStatus = async (status: Task['status']) => {
+    setActionError(null);
     setActionLoading(status);
     try {
       const res = await fetch(`/api/tasks/${task.id}`, {
@@ -206,21 +208,52 @@ function ReviewTaskCard({ task, workspaceSlug, onTaskUpdated }: { task: ReviewTa
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
       });
-      if (res.ok) onTaskUpdated();
+
+      if (!res.ok) {
+        let message = `Failed to update task status (${res.status})`;
+        try {
+          const payload = await res.json();
+          if (Array.isArray(payload?.details) && payload.details.length > 0) {
+            message = payload.details.join(' ');
+          } else if (typeof payload?.error === 'string') {
+            message = payload.error;
+          }
+        } catch {
+          // Keep fallback message
+        }
+        setActionError(message);
+        return;
+      }
+
+      onTaskUpdated();
     } catch (error) {
       console.error('Failed to update review task status:', error);
+      setActionError(error instanceof Error ? error.message : 'Failed to update task status');
     } finally {
       setActionLoading(null);
     }
   };
 
   const runTests = async () => {
+    setActionError(null);
     setActionLoading('test');
     try {
       const res = await fetch(`/api/tasks/${task.id}/test`, { method: 'POST' });
-      if (res.ok) onTaskUpdated();
+      if (!res.ok) {
+        let message = `Failed to run tests (${res.status})`;
+        try {
+          const payload = await res.json();
+          if (typeof payload?.error === 'string') message = payload.error;
+        } catch {
+          // Keep fallback message
+        }
+        setActionError(message);
+        return;
+      }
+      onTaskUpdated();
     } catch (error) {
       console.error('Failed to run tests from review card:', error);
+      setActionError(error instanceof Error ? error.message : 'Failed to run tests');
     } finally {
       setActionLoading(null);
     }
@@ -256,6 +289,12 @@ function ReviewTaskCard({ task, workspaceSlug, onTaskUpdated }: { task: ReviewTa
       {latestActivity && (
         <div className="rounded-lg border border-mc-border bg-mc-bg px-3 py-3 text-sm text-mc-text-secondary">
           {latestActivity.message}
+        </div>
+      )}
+
+      {actionError && (
+        <div className="rounded-lg border border-mc-accent-red/30 bg-mc-accent-red/10 px-3 py-3 text-sm text-mc-text-secondary">
+          {actionError}
         </div>
       )}
 

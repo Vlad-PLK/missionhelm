@@ -1,20 +1,26 @@
 services:
-  mission-control:
-    container_name: mission-control
+  mission-control: # Legacy compose service key kept for backward compatibility.
+    container_name: ${LA_CITADEL_CONTAINER_NAME:-mission-control}
     build:
       context: .
       dockerfile: Dockerfile
-    image: mission-control:latest
+    image: ${LA_CITADEL_IMAGE:-mission-control:latest}
     network_mode: host
     env_file:
       - path: .env
         required: false
     environment:
       NODE_ENV: production
+      LA_CITADEL_DATABASE_PATH: /app/data/mission-control.db
       DATABASE_PATH: /app/data/mission-control.db
+      LA_CITADEL_WORKSPACE_BASE_PATH: /app/workspace
       WORKSPACE_BASE_PATH: /app/workspace
+      LA_CITADEL_PROJECTS_PATH: /app/workspace/projects
       PROJECTS_PATH: /app/workspace/projects
+      LA_CITADEL_OPENCLAW_GATEWAY_URL: ws://127.0.0.1:18789
       OPENCLAW_GATEWAY_URL: ws://127.0.0.1:18789
+      OPENCODE_CODING_MODEL: ${OPENCODE_CODING_MODEL:-openai/gpt-5.3}
+      OPENCODE_CODING_FALLBACK_MODEL: ${OPENCODE_CODING_FALLBACK_MODEL:-openai/gpt-5.4}
     volumes:
       - mission-control-data:/app/data
       - mission-control-workspace:/app/workspace

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getOpenClawClient } from '@/lib/openclaw/client';
 import { getDb } from '@/lib/db';
 import { broadcast } from '@/lib/events';
+import { APP_DISPLAY_NAME } from '@/lib/branding';
 
 export const dynamic = 'force-dynamic';
 interface RouteParams {
@@ -73,8 +74,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
-    // Prefix message with [Mission Control] so the agent knows the source
-    const prefixedContent = `[Mission Control] ${content}`;
+    // Prefix message so the agent knows the source UI/runtime.
+    const prefixedContent = `[${APP_DISPLAY_NAME}] ${content}`;
     await client.sendMessage(id, prefixedContent);
 
     return NextResponse.json({ success: true });

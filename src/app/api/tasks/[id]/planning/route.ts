@@ -3,6 +3,7 @@ import { DbStartupError, getDb, getDbStartupStatus, queryAll, queryOne, run } fr
 import { broadcast } from '@/lib/events';
 import { extractJSON } from '@/lib/planning-utils';
 import { planningRouteDeps } from './deps';
+import { APP_DISPLAY_NAME } from '@/lib/branding';
 // File system imports removed - using OpenClaw API instead
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +17,7 @@ function createPreflightErrorResponse(error: DbStartupError) {
     {
       error: 'Database is not ready for planning operations',
       code: 'DB_PREFLIGHT_FAILED',
-      message: 'Mission Control detected schema drift or an unrepaired startup issue. Check readiness receipts before retrying planning.',
+      message: `${APP_DISPLAY_NAME} detected schema drift or an unrepaired startup issue. Check readiness receipts before retrying planning.`,
       readiness: error.startupStatus,
       actions: [
         'Open GET /api/health/readiness to inspect migration and preflight receipts.',

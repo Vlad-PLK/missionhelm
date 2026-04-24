@@ -14,6 +14,7 @@ export function TaskReviewPanel({ task, onTaskUpdated }: TaskReviewPanelProps) {
   const [deliverables, setDeliverables] = useState<TaskDeliverable[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const loadContext = useCallback(async () => {
     try {
@@ -44,6 +45,7 @@ export function TaskReviewPanel({ task, onTaskUpdated }: TaskReviewPanelProps) {
   }, [activities]);
 
   const runStatusUpdate = async (status: TaskStatus) => {
+    setActionError(null);
     setActionLoading(status);
     try {
       const res = await fetch(`/api/tasks/${task.id}`, {
@@ -53,24 +55,46 @@ export function TaskReviewPanel({ task, onTaskUpdated }: TaskReviewPanelProps) {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to update task status');
+        let message = `Failed to update task status (${res.status})`;
+        try {
+          const payload = await res.json();
+          if (Array.isArray(payload?.details) && payload.details.length > 0) {
+            message = payload.details.join(' ');
+          } else if (typeof payload?.error === 'string') {
+            message = payload.error;
+          }
+        } catch {
+          // Keep fallback
+        }
+        setActionError(message);
+        return;
       }
 
       const updatedTask = await res.json();
       onTaskUpdated?.(updatedTask);
     } catch (error) {
       console.error('Failed to update task status:', error);
+      setActionError(error instanceof Error ? error.message : 'Failed to update task status');
     } finally {
       setActionLoading(null);
     }
   };
 
   const runAutomatedTests = async () => {
+    setActionError(null);
     setActionLoading('test');
     try {
       const res = await fetch(`/api/tasks/${task.id}/test`, { method: 'POST' });
       if (!res.ok) {
-        throw new Error('Failed to run automated tests');
+        let message = `Failed to run automated tests (${res.status})`;
+        try {
+          const payload = await res.json();
+          if (typeof payload?.error === 'string') message = payload.error;
+        } catch {
+          // Keep fallback
+        }
+        setActionError(message);
+        return;
       }
 
       const result = await res.json();
@@ -84,6 +108,7 @@ export function TaskReviewPanel({ task, onTaskUpdated }: TaskReviewPanelProps) {
       await loadContext();
     } catch (error) {
       console.error('Failed to run tests:', error);
+      setActionError(error instanceof Error ? error.message : 'Failed to run tests');
     } finally {
       setActionLoading(null);
     }
@@ -133,6 +158,12 @@ export function TaskReviewPanel({ task, onTaskUpdated }: TaskReviewPanelProps) {
             <div className="rounded-lg border border-mc-accent-red/30 bg-mc-accent-red/10 px-3 py-3 text-sm text-mc-text">
               <div className="font-medium">Dispatch warning</div>
               <div className="text-xs text-mc-text-secondary mt-1">{task.planning_dispatch_error}</div>
+            </div>
+          )}
+
+          {actionError && (
+            <div className="rounded-lg border border-mc-accent-red/30 bg-mc-accent-red/10 px-3 py-3 text-sm text-mc-text-secondary">
+              {actionError}
             </div>
           )}
 

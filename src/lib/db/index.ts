@@ -1,9 +1,9 @@
 import Database from 'better-sqlite3';
-import path from 'path';
 import fs from 'fs';
 import { schema } from './schema';
 import { runMigrations, type MigrationRunReceipt } from './migrations';
 import { runSchemaPreflight, type PreflightReceipt } from './inspection';
+import { getDatabasePath } from '../branding';
 
 let db: Database.Database | null = null;
 
@@ -34,7 +34,7 @@ let startupStatus: DbStartupStatus = {
 };
 
 function getDbPath(): string {
-  return process.env.DATABASE_PATH || path.join(process.cwd(), 'mission-control.db');
+  return getDatabasePath();
 }
 
 export function getDb(): Database.Database {

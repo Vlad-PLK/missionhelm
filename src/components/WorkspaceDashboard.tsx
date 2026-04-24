@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, ArrowRight, Folder, Users, CheckSquare, Trash2, AlertTriangle, ActivitySquare, Settings2 } from 'lucide-react';
 import Link from 'next/link';
 import type { WorkspaceStats } from '@/lib/types';
+import { APP_DISPLAY_NAME } from '@/lib/branding';
 
 const PROTECTED_WORKSPACE_SLUGS = new Set(['default', 'cafe-fino', 'autonomous-workflow', 'cronjobs-review']);
 
@@ -78,7 +79,7 @@ export function WorkspaceDashboard() {
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <span className="text-2xl">🦞</span>
-              <h1 className="text-lg lg:text-xl font-bold">Mission Control</h1>
+              <h1 className="text-lg lg:text-xl font-bold">{APP_DISPLAY_NAME}</h1>
             </div>
             <div className="flex items-center gap-2">
               <Link href="/operations" className="hidden md:inline-flex items-center gap-2 px-3 lg:px-4 py-2 border border-mc-border bg-mc-bg text-mc-text rounded-lg font-medium hover:border-mc-accent/40 min-h-[44px]">

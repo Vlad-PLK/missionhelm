@@ -5,6 +5,7 @@ import { getOpenClawClient } from '@/lib/openclaw/client';
 import { broadcast } from '@/lib/events';
 import { buildDispatchPrompt, fetchDispatchContext } from '@/lib/prompt-templates';
 import type { Task, Agent, OpenClawSession } from '@/lib/types';
+import { APP_RUNTIME_CHANNEL, APP_RUNTIME_SESSION_PREFIX } from '@/lib/branding';
 
 export const dynamic = 'force-dynamic';
 interface RouteParams {
@@ -105,12 +106,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (!session) {
       // Create session record
       const sessionId = uuidv4();
-      const openclawSessionId = `mission-control-${agent.id}`;
+      const openclawSessionId = `${APP_RUNTIME_SESSION_PREFIX}-${agent.id}`;
       
       run(
         `INSERT INTO openclaw_sessions (id, agent_id, openclaw_session_id, channel, status, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [sessionId, agent.id, openclawSessionId, 'mission-control', 'active', now, now]
+        [sessionId, agent.id, openclawSessionId, APP_RUNTIME_CHANNEL, 'active', now, now]
       );
 
       session = queryOne<OpenClawSession>(

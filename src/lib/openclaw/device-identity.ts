@@ -12,9 +12,27 @@ interface DeviceIdentity {
   privateKeyPem: string;
 }
 
-const IDENTITY_DIR = path.join(os.homedir(), '.mission-control', 'identity');
+const IDENTITY_DIR = path.join(os.homedir(), '.la-citadel', 'identity');
+const LEGACY_IDENTITY_DIR = path.join(os.homedir(), '.mission-control', 'identity');
 const IDENTITY_FILE = path.join(IDENTITY_DIR, 'device.json');
+const LEGACY_IDENTITY_FILE = path.join(LEGACY_IDENTITY_DIR, 'device.json');
 const ED25519_SPKI_PREFIX = Buffer.from('302a300506032b6570032100', 'hex');
+
+function resolveIdentityFilePath(filePath?: string): string {
+  if (filePath) {
+    return filePath;
+  }
+
+  if (fs.existsSync(IDENTITY_FILE)) {
+    return IDENTITY_FILE;
+  }
+
+  if (fs.existsSync(LEGACY_IDENTITY_FILE)) {
+    return LEGACY_IDENTITY_FILE;
+  }
+
+  return IDENTITY_FILE;
+}
 
 // Base64url encoding (RFC 4648)
 function base64UrlEncode(buf: Buffer): string {
@@ -55,10 +73,12 @@ function generateIdentity(): DeviceIdentity {
 }
 
 // Load existing identity or create a new one
-export function loadOrCreateDeviceIdentity(filePath: string = IDENTITY_FILE): DeviceIdentity {
+export function loadOrCreateDeviceIdentity(filePath?: string): DeviceIdentity {
+  const resolvedPath = resolveIdentityFilePath(filePath);
+
   try {
-    if (fs.existsSync(filePath)) {
-      const raw = fs.readFileSync(filePath, 'utf8');
+    if (fs.existsSync(resolvedPath)) {
+      const raw = fs.readFileSync(resolvedPath, 'utf8');
       const parsed = JSON.parse(raw);
       if (parsed?.version === 1 && parsed.deviceId && parsed.publicKeyPem && parsed.privateKeyPem) {
         // Verify deviceId matches public key
@@ -75,7 +95,7 @@ export function loadOrCreateDeviceIdentity(filePath: string = IDENTITY_FILE): De
   }
 
   const identity = generateIdentity();
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
   const stored = {
     version: 1,
     deviceId: identity.deviceId,
@@ -83,7 +103,7 @@ export function loadOrCreateDeviceIdentity(filePath: string = IDENTITY_FILE): De
     privateKeyPem: identity.privateKeyPem,
     createdAtMs: Date.now(),
   };
-  fs.writeFileSync(filePath, JSON.stringify(stored, null, 2) + '\n', { mode: 0o600 });
+  fs.writeFileSync(resolvedPath, JSON.stringify(stored, null, 2) + '\n', { mode: 0o600 });
   return identity;
 }
 

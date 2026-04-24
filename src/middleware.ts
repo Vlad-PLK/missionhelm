@@ -72,7 +72,7 @@ export function middleware(request: NextRequest) {
     const method = request.method.toUpperCase();
     if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
       return NextResponse.json(
-        { error: 'Demo mode — this is a read-only instance. Visit github.com/Vlad-PLK/missionhelm to run your own!' },
+        { error: 'Demo mode — this is a read-only La Citadel instance. Visit github.com/Vlad-PLK/missionhelm to run your own.' },
         { status: 403 }
       );
     }
