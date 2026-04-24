@@ -184,7 +184,7 @@ $PROJECTS_PATH/{project-name}/
 ```
 
 **IMPORTANT: Cross-Machine Architecture**
-- The orchestrator may run on a different machine than MissionHelm
+- Hermès may run on a different machine than MissionHelm
 - MissionHelm runs on the server at YOUR_SERVER_IP
 - You may not have direct filesystem access to the projects directory
 - Use the `/api/files/upload` endpoint to send files to MissionHelm

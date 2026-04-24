@@ -152,7 +152,7 @@ Counts openclaw_sessions where status='active' and session_type='subagent'
 
 ### 5. Orchestration Integration
 
-The orchestrator's workflow when orchestrating tasks:
+Hermès's workflow when orchestrating tasks:
 
 ```typescript
 // 1. Task found in inbox
@@ -286,7 +286,7 @@ broadcast({
 - [ ] Activity log shows all actions chronologically
 - [ ] Deliverables display with file paths
 - [ ] Agent counter updates when sub-agents spawn
-- [ ] The orchestrator's orchestration posts to new endpoints
+- [ ] Hermès's orchestration posts to new endpoints
 - [ ] No memory leaks from SSE connections
 - [ ] Works on production server after git pull
 

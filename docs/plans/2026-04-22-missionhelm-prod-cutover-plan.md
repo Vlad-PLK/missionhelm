@@ -1,9 +1,9 @@
-# MissionHelm Production Cutover Plan (Safe Merge from Current Mission Control Runtime)
+# MissionHelm Production Cutover Plan (Safe Merge from Current Production Runtime)
 
 > For Hermes: execute in phases, verify each gate, and do not delete rollback artifacts until 7-day stability passes.
 
 Goal
-- Move production runtime identity from Mission Control -> MissionHelm without losing credentials, DB state, workspace files, or OpenClaw connectivity.
+- Move production runtime identity to MissionHelm without losing credentials, DB state, workspace files, or OpenClaw connectivity.
 
 Current verified baseline
 - Running container: mission-control

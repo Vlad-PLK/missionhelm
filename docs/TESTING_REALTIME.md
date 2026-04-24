@@ -164,7 +164,7 @@ sqlite3 missionhelm.db
 
 **Scenario: Agent orchestration flow**
 
-1. **the orchestrator (main agent) creates task:**
+1. **Hermès (main agent) creates task:**
    ```bash
    curl -X POST http://localhost:4000/api/tasks \
      -H "Content-Type: application/json" \
@@ -176,7 +176,7 @@ sqlite3 missionhelm.db
      }'
    ```
 
-2. **the orchestrator triages and assigns:**
+2. **Hermès triages and assigns:**
    ```bash
    TASK_ID="..." # from step 1
    

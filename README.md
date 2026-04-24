@@ -1,6 +1,6 @@
 # MissionHelm
 
-MissionHelm is our **Hermès-first Mission Control** runtime for orchestrating AI delivery work across projects, workspaces, and agents.
+MissionHelm is our **Hermès-first MissionHelm** runtime for orchestrating AI delivery work across projects, workspaces, and agents.
 
 It is designed for one job: keep execution moving from intent to verified completion with full operational visibility.
 

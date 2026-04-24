@@ -269,7 +269,7 @@ POST /api/tasks/[id]/activities
 
 ## 📝 Usage Examples
 
-### For Orchestrating Agent (the orchestrator)
+### For Orchestrating Agent (Hermès)
 
 ```typescript
 // 1. Create task

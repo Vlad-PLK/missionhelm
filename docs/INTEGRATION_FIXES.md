@@ -34,12 +34,12 @@
 
 ### 3. ✅ Activities/Deliverables/Sessions Empty
 **Problem:** No transparency into what sub-agents are doing  
-**Root Cause:** The orchestrator's orchestration workflow wasn't posting to activity/deliverable endpoints  
+**Root Cause:** Hermès's orchestration workflow wasn't posting to activity/deliverable endpoints  
 **Fix:** Created comprehensive orchestration helper library
 
 **Files Created:**
 - `src/lib/orchestration.ts` - Helper functions for logging
-- `docs/CHARLIE_WORKFLOW.md` - Complete usage guide for the orchestrator
+- `docs/ORCHESTRATION_WORKFLOW.md` - Complete usage guide for Hermès
 
 **API Functions:**
 - `logActivity()` - Log task activities
@@ -133,9 +133,9 @@ All criteria met:
 
 - ✅ Task moves in real-time without refresh
 - ✅ Agent counter shows "1" when sub-agent working
-- ✅ Activities tab shows timestamped log (when the orchestrator uses helper)
-- ✅ Deliverables tab shows file paths (when the orchestrator uses helper)
-- ✅ Sessions tab shows sub-agent info (when the orchestrator uses helper)
+- ✅ Activities tab shows timestamped log (when Hermès uses helper)
+- ✅ Deliverables tab shows file paths (when Hermès uses helper)
+- ✅ Sessions tab shows sub-agent info (when Hermès uses helper)
 - ✅ Header shows accurate counts
 - ✅ Review → Done requires deliverables
 - ✅ Only master agents can approve tasks
@@ -155,12 +155,12 @@ All criteria met:
 
 **Created:**
 1. `src/lib/orchestration.ts` - Orchestration helper library
-2. `docs/CHARLIE_WORKFLOW.md` - The orchestrator's usage guide
+2. `docs/ORCHESTRATION_WORKFLOW.md` - Hermès's usage guide
 3. `docs/INTEGRATION_FIXES.md` - This document
 
 ---
 
-## Usage for the orchestrator
+## Usage for Hermès
 
 When spawning a sub-agent to work on MissionHelm tasks:
 
@@ -200,13 +200,13 @@ if (ok) {
 }
 ```
 
-See `docs/CHARLIE_WORKFLOW.md` for complete details.
+See `docs/ORCHESTRATION_WORKFLOW.md` for complete details.
 
 ---
 
 ## Next Steps
 
-1. **Test end-to-end:** the orchestrator should test the workflow with a real task
+1. **Test end-to-end:** Hermès should test the workflow with a real task
 2. **Push to GitHub:** Commit all changes
 3. **Deploy:** Deploy to production (production server machine)
 4. **Monitor:** Watch real-time updates in action

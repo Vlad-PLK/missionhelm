@@ -313,7 +313,7 @@ ls -la missionhelm.db
 
 - [Agent Protocol Documentation](docs/AGENT_PROTOCOL.md)
 - [Real-Time Implementation](REALTIME_IMPLEMENTATION_SUMMARY.md)
-- [the orchestrator Orchestration Guide](src/lib/orchestration.ts)
+- [Hermès Orchestration Guide](src/lib/orchestration.ts)
 - [Verification Checklist](VERIFICATION_CHECKLIST.md)
 
 ---
