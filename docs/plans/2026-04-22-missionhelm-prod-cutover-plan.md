@@ -1,6 +1,6 @@
 # MissionHelm Production Cutover Plan (Safe Merge from Current Mission Control Runtime)
 
-> For Hermes: execute in phases, verify each gate, and do not delete legacy runtime artifacts until 7-day stability passes.
+> For Hermes: execute in phases, verify each gate, and do not delete rollback artifacts until 7-day stability passes.
 
 Goal
 - Move production runtime identity from Mission Control -> MissionHelm without losing credentials, DB state, workspace files, or OpenClaw connectivity.
@@ -12,8 +12,7 @@ Current verified baseline
 - Workspace path in container: /app/workspace
 - OpenClaw gateway target: ws://127.0.0.1:18789
 - Dashboard/API endpoint: http://127.0.0.1:4000
-- New source repo: https://github.com/Vlad-PLK/missionhelm (public, non-fork)
-- Legacy repo: mission-control-1 (private)
+- Source repo: https://github.com/Vlad-PLK/missionhelm (public)
 
 Non-negotiables
 1) Preserve data volumes and DB file
@@ -153,13 +152,13 @@ Objective
 - Keep reversibility while validating real workload behavior.
 
 Steps
-1. Keep legacy mission-control image and compose files for 72h minimum.
+1. Keep rollback image tags and compose files for 72h minimum.
 2. Daily verification:
    - API health/readiness
    - OpenClaw status
    - task/workspace consistency
 3. After 72h, optional cleanup:
-   - remove unused legacy container name
+   - remove unused old container name aliases
    - keep backup branch/tag and backup artifacts
 4. After 7 days stable, optional infra naming cleanup:
    - rename volume labels and DB filename to missionhelm equivalents (requires dedicated migration window)

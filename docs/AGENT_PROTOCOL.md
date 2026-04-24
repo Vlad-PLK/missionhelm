@@ -1,237 +1,141 @@
-# Agent Protocol
+# Agent Protocol (Hermès + OpenClaw + MissionHelm)
 
-This document describes how OpenClaw agents interact with MissionHelm.
+This protocol defines how execution agents must report work so MissionHelm remains auditable and actionable.
 
-## Task Assignment Flow
+---
 
-1. **Human assigns task** in MissionHelm UI
-   - Drag task card to agent in "ASSIGNED" column
-   - System auto-dispatches to agent's OpenClaw session
+## 1) Why this exists
 
-2. **Agent receives task notification**
-   ```
-   🔵 **NEW TASK ASSIGNED**
-   
-   **Title:** Build authentication system
-   **Description:** Implement JWT-based auth with refresh tokens
-   **Priority:** HIGH
-   **Due:** 2026-02-05
-   **Task ID:** abc-123-def
-   
-   Please work on this task. When complete, reply with:
-   `TASK_COMPLETE: [brief summary of what you did]`
-   
-   If you need help or clarification, ask me (the orchestrator).
-   ```
+Without structured reporting, tasks appear active but are operationally opaque.
 
-3. **Agent works on task**
-   - Task automatically moves to "IN PROGRESS"
-   - Agent status updates to "working"
-   - Agent can ask the orchestrator for help via normal conversation
+This protocol guarantees:
 
-4. **Agent completes task**
-   - Agent replies with completion message:
-     ```
-     TASK_COMPLETE: Built JWT authentication system with access/refresh tokens,
-     middleware for protected routes, and secure token storage.
-     ```
-   - Task automatically moves to "REVIEW"
-   - Agent status returns to "standby"
+- clear progress signals,
+- explicit blockers,
+- deliverable traceability,
+- safe review and closure.
 
-5. **the orchestrator reviews work**
-   - the orchestrator checks agent's session history
-   - the orchestrator inspects deliverables/code
-   - If approved: the orchestrator moves to "DONE"
-   - If needs work: the orchestrator moves back with feedback
+---
 
-## Completion Message Format
+## 2) Required message formats
 
-```
-TASK_COMPLETE: [concise summary of what you accomplished]
+### Completion
+
+```text
+TASK_COMPLETE: <summary> | deliverables: <paths/urls> | verification: <checks performed>
 ```
 
-Include receipts when possible:
+### Progress
 
-```
-TASK_COMPLETE: <summary> | deliverables: <paths/links> | verification: <how you verified>
-```
-
-## Progress Updates (to prevent work from stalling)
-
-Agents should post periodic progress so the orchestrator can unblock quickly.
-
-Format:
-
-```
+```text
 PROGRESS_UPDATE: <what changed> | next: <next step> | eta: <time>
 ```
 
-## Blockers (explicit + parallel fallback)
+### Blocker
 
-If you are blocked, don’t wait silently.
-
-Format:
-
-```
-BLOCKED: <what is blocked> | need: <specific input> | meanwhile: <fallback work>
+```text
+BLOCKED: <blocker> | need: <specific input> | meanwhile: <fallback work>
 ```
 
-Rule: ask the question **and** start the best available next step.
+Rules:
+- No empty completions (`TASK_COMPLETE: done`) 
+- No silent stalls
+- No blocker report without parallel fallback work
 
-**Examples:**
+---
 
-✅ Good:
-```
-TASK_COMPLETE: Refactored authentication module to use async/await,
-added unit tests, and updated documentation.
-```
+## 3) Lifecycle expectations
 
-✅ Good:
-```
-TASK_COMPLETE: Researched 5 competitor pricing models, compiled findings
-in pricing-analysis.md with recommendations.
-```
+MissionHelm lifecycle:
 
-❌ Bad (too vague):
-```
-TASK_COMPLETE: Done
+```text
+pending_dispatch -> planning -> inbox -> assigned -> in_progress -> testing -> review -> done
 ```
 
-❌ Bad (missing prefix):
-```
-I finished the task successfully!
-```
+Execution expectations:
 
-## Getting Help
+- `assigned` -> `in_progress`: first meaningful work signal expected quickly
+- `in_progress`: continuous `PROGRESS_UPDATE` cadence
+- `testing`: verification evidence recorded
+- `review`: task is materially complete and reviewable
 
-If you're stuck or need clarification:
+---
 
-1. **Ask the orchestrator directly** in your session
-   ```
-   @the orchestrator - Question about the authentication task: Should we support
-   OAuth providers or just email/password for now?
-   ```
+## 4) Deliverable discipline
 
-2. **Request collaboration** with another agent
-   ```
-   @the orchestrator - I need help from Design agent to create the login UI.
-   Can you coordinate?
-   ```
+Deliverables must be concrete and inspectable:
 
-3. **Report blockers**
-   ```
-   @the orchestrator - Blocked on this task: Missing API credentials for the
-   third-party service. Can you provide?
-   ```
+- file path
+- URL
+- artifact reference
 
-## Session Management
+For code tasks, include touched files and verification command outputs in summary.
 
-### Agent Sessions
-- Each agent has a persistent OpenClaw session
-- Session ID format: `missionhelm-{agent-name}`
-  - Example: `missionhelm-engineering`
-  - Example: `missionhelm-writing`
+---
 
-### Session Linking
-- Agents are automatically linked to OpenClaw when first task is assigned
-- Session remains active for future tasks
-- the orchestrator can manually link/unlink agents via MissionHelm UI
+## 5) Session discipline
 
-## Status Transitions
+Each active execution stream should map to a session record:
 
-### Task Statuses
-- **INBOX**: Unassigned, awaiting triage
-- **ASSIGNED**: Assigned to agent, auto-dispatched
-- **IN PROGRESS**: Agent actively working
-- **REVIEW**: Completed, awaiting The orchestrator's approval
-- **DONE**: Approved and closed
+- OpenClaw session exists and linked
+- Task activity timeline references meaningful actions
+- Session closure aligns with task transition intent
 
-### Agent Statuses
-- **standby**: Available for work
-- **working**: Currently assigned to task(s)
-- **offline**: Not connected to OpenClaw
+If runtime session says done but task remains active, flag reconciliation required.
 
-## API Integration
+---
 
-Agents don't call MissionHelm APIs directly. All interaction happens through:
+## 6) Review gate behavior
 
-1. **Receiving tasks** via OpenClaw session message
-2. **Reporting completion** via TASK_COMPLETE message
-3. **Asking questions** via normal conversation with the orchestrator
+`review -> done` is controlled by operator/master authority.
 
-MissionHelm handles:
-- Task routing
-- Status updates
-- Event logging
-- Workflow enforcement
+Before closure, ensure:
 
-## The orchestrator's Responsibilities
+- deliverables exist,
+- verification is explicit,
+- no unresolved blockers,
+- operator agrees output meets scope.
 
-As master orchestrator, the orchestrator:
+---
 
-- **Triages incoming tasks** from humans
-- **Assigns work** to appropriate specialist agents
-- **Monitors progress** via session activity
-- **Reviews completed work** before marking done
-- **Coordinates collaboration** when multiple agents needed
-- **Provides guidance** when agents are stuck
-- **Enforces quality standards**
+## 7) Examples
 
-Only the orchestrator (master agent with `is_master = 1`) can approve tasks from REVIEW → DONE.
+### Good completion
 
-## Error Handling
-
-### If task dispatch fails:
-- Check agent's OpenClaw session is active
-- Verify Gateway connection
-- Try manual dispatch via API
-
-### If completion not detected:
-- Ensure message format exactly matches: `TASK_COMPLETE: ...`
-- Check agent session is linked correctly
-- Manually move task via UI if needed
-
-### If stuck in review:
-- the orchestrator must manually approve (drag to DONE)
-- Only master agent can approve
-- Provides quality control checkpoint
-
-## Example Workflow
-
-```
-[Human] Creates task: "Write blog post about AI agents"
-         ↓
-[System] Auto-assigns to Writing agent
-         ↓
-[Writing] Receives notification in OpenClaw session
-         ↓
-[Writing] Works on blog post, saves to docs/blog/ai-agents.md
-         ↓
-[Writing] Replies: "TASK_COMPLETE: Wrote 1500-word blog post about
-          AI agents with examples and best practices."
-         ↓
-[System] Auto-moves to REVIEW
-         ↓
-[the orchestrator] Reviews docs/blog/ai-agents.md
-         ↓
-[the orchestrator] Approves → moves to DONE
-         ↓
-[Human] Publishes blog post
+```text
+TASK_COMPLETE: implemented provider booking guardrail and UI restriction | deliverables: src/features/booking/RatingGate.tsx, src/api/bookings/rating.ts | verification: npm test -- rating-gate.spec.ts (pass), manual flow validated on /bookings/123
 ```
 
-## Best Practices
+### Good blocker
 
-1. **Be specific in completion summaries** - help the orchestrator review faster
-2. **Ask for help early** - don't spin wheels, ping the orchestrator
-3. **Document your work** - leave breadcrumbs for review
-4. **One task at a time** - focus before moving to next
-5. **Update progress** - if task will take a while, check in with the orchestrator
+```text
+BLOCKED: OpenClaw callback rejected by proxy | need: NO_PROXY=localhost,127.0.0.1 in runtime env | meanwhile: finished unit tests and prepared patch for retry
+```
 
-## Future Enhancements
+### Bad completion (reject)
 
-Planned features:
-- Progress updates (25%, 50%, 75% complete)
-- Task dependencies (Task B requires Task A)
-- Subtask breakdown
-- Time tracking
-- Quality metrics
+```text
+TASK_COMPLETE: done
+```
+
+---
+
+## 8) Operator response rules (Hermès)
+
+- Accept only evidence-backed completion
+- If blocked: capture blocker, request input, keep fallback work moving
+- If stale: trigger redispatch or state reconciliation
+- If status drift detected: repair state based on runtime truth
+
+---
+
+## 9) Definition of operationally reported
+
+A task is operationally reported only when:
+
+1. status reached `review` (or `done`),
+2. recent completion activity exists,
+3. deliverables are present,
+4. verification signal is readable.
+
+Anything less is partial reporting, not closure.

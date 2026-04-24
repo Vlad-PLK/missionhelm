@@ -1,345 +1,141 @@
-# MissionHelm Orchestration Guide
+# MissionHelm Orchestration Playbook
 
-This document explains how to orchestrate tasks in MissionHelm, including how to:
-- Register sub-agents
-- Log activities
-- Track deliverables
-- Update task status
+This playbook defines how we operate MissionHelm as a live control plane with Hermès as orchestrator and OpenClaw as execution runtime.
 
-## API Base URL
+---
 
+## 1) Roles and boundaries
+
+### Hermès (orchestrator)
+
+- Owns intake, triage, dispatch decisions, verification, and closure
+- Detects stalls early and forces explicit blocker reporting
+- Enforces lifecycle hygiene and evidence-based completion
+
+### OpenClaw (runtime)
+
+- Runs agent sessions and execution loops
+- Delivers progress through messages and session-level telemetry
+- Does not replace operator review authority
+
+### MissionHelm (control plane)
+
+- Persists tasks/agents/workspaces/sessions/events
+- Broadcasts activity and status transitions
+- Provides API surfaces for auditability and recovery
+
+---
+
+## 2) Golden loop (always)
+
+1. Assess current state
+2. Select highest-leverage next action
+3. Execute
+4. Verify with runtime signals
+5. Record visibility receipts
+6. Set explicit next step or close
+
+If one step is skipped, orchestration quality degrades.
+
+---
+
+## 3) Lifecycle contract
+
+```text
+pending_dispatch -> planning -> inbox -> assigned -> in_progress -> testing -> review -> done
 ```
-http://localhost:4000
-```
 
-Or use the `MISSION_CONTROL_URL` environment variable.
+### Transition hygiene
 
-## Task Lifecycle
+- Never move to `done` without review intent and evidence
+- `review -> done` requires deliverables and approval authority
+- Any regression or mismatch returns task to prior actionable state
 
-```
-INBOX → ASSIGNED → IN_PROGRESS → TESTING → REVIEW → DONE
-```
+---
 
-**Status Descriptions:**
-- **INBOX**: New tasks awaiting processing
-- **ASSIGNED**: Task assigned to an agent, ready to be worked on
-- **IN_PROGRESS**: Agent actively working on the task
-- **TESTING**: Automated quality gate - runs browser tests, CSS validation, resource checks
-- **REVIEW**: Passed automated tests, awaiting human approval
-- **DONE**: Task completed and approved
+## 4) Required reporting protocol for agents
 
-## When You Receive a Task
+Accepted structured receipts:
 
-When a task is dispatched to you, the message includes:
-- Task ID
-- Output directory path
-- API endpoints to call
+- `TASK_COMPLETE: <summary> | deliverables: <paths/urls> | verification: <how verified>`
+- `PROGRESS_UPDATE: <delta> | next: <next action> | eta: <time>`
+- `BLOCKED: <blocker> | need: <specific input> | meanwhile: <fallback action>`
 
-## Required API Calls
+Vague completions are rejected.
 
-### 1. Register Sub-Agent (when spawning a worker)
+---
+
+## 5) Session discipline
+
+MissionHelm is session-driven:
+
+- Link execution to an OpenClaw session (`openclaw_sessions`)
+- Register sub-agent sessions under task context when applicable
+- Ensure each material step writes `task_activities`
+- Attach outputs via `task_deliverables`
+
+A claim without session/activity/deliverable evidence is not operational truth.
+
+---
+
+## 6) Runtime truth checks
+
+Use these checks for reality, not assumptions:
 
 ```bash
-curl -X POST http://localhost:4000/api/tasks/{TASK_ID}/subagent \
-  -H "Content-Type: application/json" \
-  -d '{
-    "openclaw_session_id": "unique-session-id",
-    "agent_name": "Designer"
-  }'
+# dashboard reachability
+curl -sS http://127.0.0.1:4000/ >/dev/null && echo OK
+
+# operational state
+curl -sS http://127.0.0.1:4000/api/tasks | jq 'length'
+curl -sS "http://127.0.0.1:4000/api/workspaces?stats=true" | jq 'length'
+curl -sS http://127.0.0.1:4000/api/agents | jq 'length'
+curl -sS http://127.0.0.1:4000/api/openclaw/status | jq '{connected,gateway_url}'
 ```
 
-This registers the sub-agent and increments the "Active Sub-Agents" counter.
+If one endpoint fails, continue with partial signal and report the failure explicitly.
 
-### 2. Log Activity (for each significant action)
+---
 
-```bash
-curl -X POST http://localhost:4000/api/tasks/{TASK_ID}/activities \
-  -H "Content-Type: application/json" \
-  -d '{
-    "activity_type": "updated",
-    "message": "Started working on design mockups",
-    "agent_id": "optional-agent-uuid"
-  }'
-```
+## 7) Day-start operating sequence
 
-Activity types:
-- `spawned` - When sub-agent starts
-- `updated` - Progress update
-- `completed` - Work finished
-- `file_created` - Created a deliverable
-- `status_changed` - Task moved to new status
+1. Confirm MissionHelm + OpenClaw runtime health
+2. Pull workspace/task histograms
+3. Identify stale `assigned`/`in_progress`/`testing` tasks
+4. Validate session-to-task consistency
+5. Redispatch or reclassify blocked/stale tasks
+6. Publish concise operator status update with next actions
 
-### 3. Register Deliverable (for each output file)
+---
 
-**IMPORTANT: You must CREATE THE FILE FIRST before registering it as a deliverable!**
+## 8) Review and closure standard
 
-```bash
-# Step 1: Actually create the file
-mkdir -p $PROJECTS_PATH/homepage
-cat > $PROJECTS_PATH/homepage/index.html << 'EOF'
-<!DOCTYPE html>
-<html>
-<head><title>Homepage</title></head>
-<body><h1>Welcome</h1></body>
-</html>
-EOF
+A task can be closed only when all are true:
 
-# Step 2: Register the deliverable (will warn if file doesn't exist)
-curl -X POST http://localhost:4000/api/tasks/{TASK_ID}/deliverables \
-  -H "Content-Type: application/json" \
-  -d '{
-    "deliverable_type": "file",
-    "title": "Homepage Design",
-    "path": "$PROJECTS_PATH/homepage/index.html",
-    "description": "Main homepage with responsive layout"
-  }'
-```
+- Scope is implemented
+- Verification result is explicit
+- Deliverables exist and are reviewable
+- Activity timeline shows meaningful execution
+- Closure decision is documented
 
-The API will return a `warning` field if the file doesn't exist:
-```json
-{
-  "id": "...",
-  "title": "Homepage Design",
-  "warning": "File does not exist at path: $PROJECTS_PATH/homepage/index.html. Please create the file."
-}
-```
+---
 
-Deliverable types:
-- `file` - Local file (must exist!)
-- `url` - Web URL
-- `artifact` - Other output
+## 9) Common failure modes
 
-### 4. Update Task Status
+- Agent marked `working` with no active owned task
+- Tasks stuck in `in_progress` without new activity
+- DB-active sessions while runtime session is absent
+- Deliverables logged without real files/urls
+- Approval attempts without evidence
 
-```bash
-curl -X PATCH http://localhost:4000/api/tasks/{TASK_ID} \
-  -H "Content-Type: application/json" \
-  -d '{
-    "status": "review"
-  }'
-```
+Handle by reconciliation, not by status cosmetics.
 
-## Complete Example Workflow
+---
 
-```bash
-TASK_ID="abc-123"
-BASE_URL="http://localhost:4000"
+## 10) Non-negotiables
 
-# 1. Log that you're starting
-curl -X POST $BASE_URL/api/tasks/$TASK_ID/activities \
-  -H "Content-Type: application/json" \
-  -d '{"activity_type": "updated", "message": "Starting work on task"}'
-
-# 2. Spawn a sub-agent
-curl -X POST $BASE_URL/api/tasks/$TASK_ID/subagent \
-  -H "Content-Type: application/json" \
-  -d '{"openclaw_session_id": "subagent-'$(date +%s)'", "agent_name": "Designer"}'
-
-# 3. Sub-agent does work and creates file...
-mkdir -p $PROJECTS_PATH/my-project
-echo "<html><body>Hello World</body></html>" > $PROJECTS_PATH/my-project/output.html
-
-# 4. Register the deliverable
-curl -X POST $BASE_URL/api/tasks/$TASK_ID/deliverables \
-  -H "Content-Type: application/json" \
-  -d '{
-    "deliverable_type": "file",
-    "title": "Completed Design",
-    "path": "$PROJECTS_PATH/my-project/output.html",
-    "description": "Final design with all requested features"
-  }'
-
-# 5. Log completion
-curl -X POST $BASE_URL/api/tasks/$TASK_ID/activities \
-  -H "Content-Type: application/json" \
-  -d '{"activity_type": "completed", "message": "Design completed successfully"}'
-
-# 6. Move to review
-curl -X PATCH $BASE_URL/api/tasks/$TASK_ID \
-  -H "Content-Type: application/json" \
-  -d '{"status": "review"}'
-```
-
-## Debugging
-
-Enable debug mode in browser console:
-```javascript
-mcDebug.enable()
-```
-
-Then refresh and watch for:
-- `[SSE]` - Server-sent events
-- `[STORE]` - Zustand state changes
-- `[API]` - API calls
-- `[FILE]` - File operations
-
-## Endpoints Reference
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/tasks` | GET | List all tasks |
-| `/api/tasks` | POST | Create task |
-| `/api/tasks/{id}` | GET | Get task details |
-| `/api/tasks/{id}` | PATCH | Update task |
-| `/api/tasks/{id}/activities` | GET | List activities |
-| `/api/tasks/{id}/activities` | POST | Log activity |
-| `/api/tasks/{id}/deliverables` | GET | List deliverables |
-| `/api/tasks/{id}/deliverables` | POST | Add deliverable |
-| `/api/tasks/{id}/subagent` | GET | List sub-agents |
-| `/api/tasks/{id}/subagent` | POST | Register sub-agent |
-| `/api/openclaw/sessions` | GET | List all sessions |
-| `/api/openclaw/sessions/{id}` | PATCH | Update session (mark complete) |
-| `/api/openclaw/sessions/{id}` | DELETE | Delete a session |
-| `/api/files/reveal` | POST | Open file in Finder |
-| `/api/files/preview` | GET | Preview HTML file |
-| `/api/files/upload` | POST | Upload file from remote agent |
-| `/api/files/upload` | GET | Get upload endpoint info |
-| `/api/files/download` | GET | Download file from server |
-
-## Activity Body Schema
-
-```json
-{
-  "activity_type": "spawned|updated|completed|file_created|status_changed",
-  "message": "Human-readable description of what happened",
-  "agent_id": "optional-uuid-of-agent",
-  "metadata": { "optional": "additional data" }
-}
-```
-
-### Approval Gate For `review -> done`
-
-MissionHelm enforces approval at the backend, not just in operator docs.
-
-- `review -> done` always requires at least one deliverable.
-- If `updated_by_agent_id` is provided for `review -> done`, it must reference a master agent.
-- If `MC_APPROVAL_REQUIRE_TEST_EVIDENCE=true`, the latest test activity must be `test_passed` unless an `approval_override_reason` is supplied.
-- Every successful status transition writes a structured `task_activities` receipt and `events` receipt with transition metadata.
-
-Example approval request:
-
-```bash
-curl -X PATCH http://localhost:4000/api/tasks/{TASK_ID} \
-  -H "Content-Type: application/json" \
-  -d '{
-    "status": "done",
-    "updated_by_agent_id": "master-agent-uuid",
-    "approval_notes": "Reviewed deliverables and accepted final result"
-  }'
-```
-
-Example approval with test-evidence override:
-
-```bash
-curl -X PATCH http://localhost:4000/api/tasks/{TASK_ID} \
-  -H "Content-Type: application/json" \
-  -d '{
-    "status": "done",
-    "updated_by_agent_id": "master-agent-uuid",
-    "approval_override_reason": "Hotfix validated manually in production-like environment",
-    "approval_notes": "Manual validation completed by operator"
-  }'
-```
-
-## Deliverable Body Schema
-
-```json
-{
-  "deliverable_type": "file|url|artifact",
-  "title": "Display name for the deliverable",
-  "path": "/full/path/to/file.html",
-  "description": "Optional description"
-}
-```
-
-## Update Task Body Schema
-
-```json
-{
-  "status": "review|done",
-  "updated_by_agent_id": "optional-master-agent-uuid-for-agent-initiated-approval",
-  "approval_override_reason": "required only when test evidence policy is enabled and no passing test evidence exists",
-  "approval_notes": "optional approval note recorded in activity/event metadata"
-}
-```
-
-## Approval Policy Toggles
-
-| Variable | Default | Effect |
-|----------|---------|--------|
-| `MC_APPROVAL_REQUIRE_TEST_EVIDENCE` | `false` | Requires latest test activity to be `test_passed` before `review -> done`, unless `approval_override_reason` is provided |
-| `MC_APPROVAL_SOFT_ENFORCEMENT` | `false` | Logs approval gate failures in receipts but does not block the transition |
-
-Rollback notes:
-- Set `MC_APPROVAL_REQUIRE_TEST_EVIDENCE=false` to disable the optional test-evidence gate.
-- Set `MC_APPROVAL_SOFT_ENFORCEMENT=true` to keep audit receipts while temporarily allowing approvals through failed gates.
-
-## Sub-Agent Body Schema
-
-```json
-{
-  "openclaw_session_id": "unique-identifier-for-session",
-  "agent_name": "Designer|Developer|Researcher|Writer"
-}
-```
-
-## File Upload Body Schema (for remote agents)
-
-```json
-{
-  "relativePath": "project-name/filename.html",
-  "content": "<!DOCTYPE html>...",
-  "encoding": "utf-8"
-}
-```
-
-The file will be saved at `$PROJECTS_PATH/{relativePath}`
-
-## File Download Query Parameters (for remote agents)
-
-```
-GET /api/files/download?relativePath=project-name/filename.html
-GET /api/files/download?path=$PROJECTS_PATH/project-name/filename.html
-GET /api/files/download?relativePath=project-name/filename.html&raw=true
-```
-
-Query parameters:
-- `relativePath` - Path relative to projects base (preferred)
-- `path` - Full absolute path (must be under projects base)
-- `raw` - If `true`, returns raw file content; otherwise returns JSON with metadata
-
-JSON response includes: `success`, `path`, `relativePath`, `size`, `contentType`, `content`, `encoding`, `modifiedAt`
-
-## Completing a Sub-Agent Session
-
-When a sub-agent finishes its work, mark it as complete:
-
-```bash
-curl -X PATCH http://localhost:4000/api/openclaw/sessions/{SESSION_ID} \
-  -H "Content-Type: application/json" \
-  -d '{
-    "status": "completed",
-    "ended_at": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
-  }'
-```
-
-This updates the agent status to "idle" and broadcasts an `agent_completed` event.
-
-## Deleting a Sub-Agent Session
-
-To delete a stuck or unwanted session:
-
-```bash
-curl -X DELETE http://localhost:4000/api/openclaw/sessions/{SESSION_ID}
-```
-
-## SSE Events
-
-The following events are broadcast to all connected clients:
-
-- `task_created` - New task added
-- `task_updated` - Task modified (including status changes)
-- `activity_logged` - New activity logged
-- `deliverable_added` - New deliverable registered
-- `agent_spawned` - Sub-agent started
-- `agent_completed` - Sub-agent finished
+- Prioritize live verification over assumptions
+- Preserve operational visibility at every step
+- Keep changes minimal and reversible
+- Separate configured state from verified-running state
+- Never declare done from intent alone

@@ -1,244 +1,169 @@
-# Task Orchestration Workflow
+# Orchestration Workflow (API + Runtime)
 
-This guide explains how the master agent should orchestrate sub-agents to properly integrate with MissionHelm.
+This document is the implementation-level workflow for operating MissionHelm with Hermès and OpenClaw.
 
-## Overview
+---
 
-When the orchestrator spawns a sub-agent to work on a task, **all activities, deliverables, and session info must be logged** to MissionHelm so the UI shows real-time progress.
+## 1) Control objective
 
-## Import the Helper
+Keep every active task observable, progressing, and recoverable.
 
-```typescript
-// From Node.js context (the orchestrator's environment)
-import * as orchestrator from '@/lib/orchestration';
+Observable means:
+- activity events,
+- deliverable records,
+- status transitions,
+- session state coherence.
 
-// Or use direct fetch calls if TypeScript module isn't available
+---
+
+## 2) Core API surfaces
+
+Base URL (local default):
+
+```text
+http://127.0.0.1:4000
 ```
 
-## Workflow Steps
+### State endpoints
 
-### 1. When Spawning a Sub-Agent
+- `GET /api/workspaces?stats=true`
+- `GET /api/tasks`
+- `GET /api/agents`
+- `GET /api/openclaw/status`
+- `GET /api/openclaw/sessions?status=active`
 
-**Immediately after spawning**, register the session:
+### Task evidence endpoints
 
-```typescript
-await orchestrator.onSubAgentSpawned({
-  taskId: 'task-abc123',                           // From MissionHelm task
-  sessionId: 'agent:main:subagent:xyz789',         // Sub-agent's OpenClaw session ID
-  agentName: 'fix-missionhelm-integration',    // Descriptive name
-  description: 'Fix real-time updates and logging', // Optional details
-});
-```
+- `GET /api/tasks/{taskId}`
+- `GET /api/tasks/{taskId}/activities`
+- `GET /api/tasks/{taskId}/deliverables`
 
-**What this does:**
-- Creates activity log entry: "Sub-agent spawned: fix-missionhelm-integration"
-- Registers session in `openclaw_sessions` table with `session_type='subagent'`
-- Broadcasts SSE event so UI updates immediately
-- Agent counter in sidebar updates from 0 → 1
+---
 
-### 2. During Sub-Agent Work
+## 3) Operational cycle
 
-Log significant activities as work progresses:
+### Step A — assess
 
-```typescript
-await orchestrator.logActivity({
-  taskId: 'task-abc123',
-  activityType: 'updated',
-  message: 'Fixed SSE broadcast in dispatch endpoint',
-  metadata: { file: 'src/app/api/tasks/[id]/dispatch/route.ts' }
-});
+1. Pull workspace + task inventory
+2. Build status histogram
+3. Detect stale active tasks
+4. Detect agent/task hygiene drift
 
-await orchestrator.logActivity({
-  taskId: 'task-abc123',
-  activityType: 'file_created',
-  message: 'Created orchestration helper',
-  metadata: { file: 'src/lib/orchestration.ts' }
-});
-```
+### Step B — execute
 
-**Activity Types:**
-- `spawned` - Sub-agent started
-- `updated` - General progress update
-- `completed` - Sub-agent finished
-- `file_created` - File created/modified
-- `status_changed` - Status change occurred
+- dispatch pending actionable work,
+- log activities as soon as work starts,
+- keep progress cadence visible,
+- escalate blockers fast.
 
-### 3. When Sub-Agent Completes
+### Step C — verify
 
-**Before marking task as review**, log completion with deliverables:
+Before any closure decision, verify:
 
-```typescript
-await orchestrator.onSubAgentCompleted({
-  taskId: 'task-abc123',
-  sessionId: 'agent:main:subagent:xyz789',
-  agentName: 'fix-missionhelm-integration',
-  summary: 'All integration issues fixed and tested',
-  deliverables: [
-    {
-      type: 'file',
-      title: 'Updated dispatch route',
-      path: 'src/app/api/tasks/[id]/dispatch/route.ts'
-    },
-    {
-      type: 'file',
-      title: 'Orchestration helper',
-      path: 'src/lib/orchestration.ts'
-    },
-    {
-      type: 'file',
-      title: 'Fixed Header component',
-      path: 'src/components/Header.tsx'
-    }
-  ]
-});
-```
+- completion evidence in activities,
+- deliverables are present and valid,
+- runtime and DB session signals are coherent.
 
-**What this does:**
-- Logs completion activity
-- Marks session as `status='completed'`, sets `ended_at` timestamp
-- Logs all deliverables to `task_deliverables` table
-- Broadcasts events so UI updates
-- Agent counter decrements back to 0
+### Step D — close or next action
 
-### 4. Review & Approval
+- Move to `done` only after approval gate
+- Otherwise define exact next action and owner
 
-**Before approving** (moving task from `review` → `done`), verify deliverables exist:
+---
 
-```typescript
-const hasDeliverables = await orchestrator.verifyTaskHasDeliverables('task-abc123');
+## 4) Stale-task heuristics
 
-if (!hasDeliverables) {
-  console.log('⚠️ Task has no deliverables - cannot approve');
-  console.log('📋 Ask sub-agent to provide deliverables or log them manually');
-  return;
-}
+Treat as stale when all are true:
 
-// Now safe to approve
-await fetch('http://localhost:4000/api/tasks/task-abc123', {
-  method: 'PATCH',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    status: 'done',
-    updated_by_agent_id: 'orchestrator-agent-id'  // the orchestrator's agent ID
-  })
-});
-```
+- task is active (`assigned|in_progress|testing|planning|pending_dispatch`)
+- no meaningful activity in last cycle window
+- no new deliverable signal
 
-**Backend validation:**
-- Endpoint will reject `review` → `done` transition if no deliverables
-- Only the master agent can approve tasks
-- This ensures quality control
+Typical response:
 
-## Direct API Usage (Without Helper)
+1. check assigned agent status,
+2. check OpenClaw live session presence,
+3. reconcile state or redispatch.
 
-If you can't import the TypeScript module, use direct fetch:
+---
 
-```typescript
-// Register sub-agent
-await fetch('http://localhost:4000/api/tasks/TASK_ID/subagent', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    openclaw_session_id: 'agent:main:subagent:xyz',
-    agent_name: 'my-subagent-name'
-  })
-});
+## 5) Session drift rules
 
-// Log activity
-await fetch('http://localhost:4000/api/tasks/TASK_ID/activities', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    activity_type: 'updated',
-    message: 'Did something important'
-  })
-});
+Known pattern:
+- DB may show active sessions while OpenClaw has no live runtime session.
 
-// Log deliverable
-await fetch('http://localhost:4000/api/tasks/TASK_ID/deliverables', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    deliverable_type: 'file',
-    title: 'My deliverable',
-    path: 'path/to/file.ts'
-  })
-});
+Interpretation:
+- not proof of active execution,
+- indicates stale control/session record risk,
+- requires reconciliation logic before trusting status.
 
-// Complete session
-await fetch('http://localhost:4000/api/openclaw/sessions/SESSION_ID', {
-  method: 'PATCH',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    status: 'completed',
-    ended_at: new Date().toISOString()
-  })
-});
-```
+---
 
-## Testing Checklist
+## 6) Minimal evidence chain for completion claims
 
-After implementing this workflow, verify:
+For a target task, fetch in order:
 
-- ✅ Task status changes appear without page refresh
-- ✅ Agent counter shows "1" when sub-agent is working
-- ✅ Activities tab shows timestamped log of all work
-- ✅ Deliverables tab shows all files/artifacts created
-- ✅ Sessions tab shows sub-agent info with start/end times
-- ✅ Header shows accurate "X agents active, Y tasks in queue"
-- ✅ Cannot approve task without deliverables
+1. `/api/tasks/{taskId}`
+2. `/api/tasks/{taskId}/activities`
+3. `/api/tasks/{taskId}/deliverables`
+4. `/api/openclaw/status`
+5. `/api/openclaw/sessions?status=active`
 
-## Common Pitfalls
+Accept completion as operationally reported only when:
 
-1. **Forgetting to register session** → Agent counter stays at 0
-2. **Not logging deliverables** → Cannot approve task
-3. **Wrong session ID format** → Session not found
-4. **Not completing session** → Agent counter never decrements
-5. **Approving without verification** → Backend rejects with 400 error
+- status advanced to `review` or `done`,
+- completion/final activity exists,
+- deliverables are present.
 
-## Example: Complete Workflow
+---
 
-```typescript
-// 1. Spawn sub-agent
-const sessionId = await spawnSubAgent({
-  label: 'fix-integration',
-  task: taskDescription
-});
+## 7) Status transition guidance
 
-// 2. Register immediately
-await orchestrator.onSubAgentSpawned({
-  taskId: task.id,
-  sessionId: sessionId,
-  agentName: 'fix-integration',
-  description: 'Fix MissionHelm integration'
-});
+- `in_progress -> testing`: include verification plan
+- `testing -> review`: attach validation result and artifacts
+- `review -> done`: apply approval governance with evidence
 
-// 3. Monitor and log progress
-// (Sub-agent does work)
+Never skip intermediate evidence logging to “fast-close” tasks.
 
-// 4. When complete, log everything
-await orchestrator.onSubAgentCompleted({
-  taskId: task.id,
-  sessionId: sessionId,
-  agentName: 'fix-integration',
-  summary: 'Fixed all integration issues',
-  deliverables: [
-    { type: 'file', title: 'Fixed route', path: 'src/api/...' }
-  ]
-});
+---
 
-// 5. Move to review
-await updateTaskStatus(task.id, 'review');
+## 8) Monitoring output contract
 
-// 6. Verify and approve
-const hasDeliverables = await orchestrator.verifyTaskHasDeliverables(task.id);
-if (hasDeliverables) {
-  await updateTaskStatus(task.id, 'done', { updated_by_agent_id: orchestratorId });
-} else {
-  console.log('⚠️ Cannot approve - no deliverables');
-}
+For scheduled monitors and operator reports, use this structure:
+
+- `STATUS: green|yellow|red`
+- Key deltas since previous cycle
+- Active blockers/stalls
+- Agent hygiene mismatches
+- Focus-task snapshot
+- Next recommended action
+
+---
+
+## 9) Practical command snippets
+
+```bash
+# Workspace and task snapshot
+curl -sS "http://127.0.0.1:4000/api/workspaces?stats=true"
+curl -sS "http://127.0.0.1:4000/api/tasks"
+
+# Runtime connectivity
+curl -sS "http://127.0.0.1:4000/api/openclaw/status"
+
+# Task evidence
+TASK_ID="<task-id>"
+curl -sS "http://127.0.0.1:4000/api/tasks/$TASK_ID"
+curl -sS "http://127.0.0.1:4000/api/tasks/$TASK_ID/activities"
+curl -sS "http://127.0.0.1:4000/api/tasks/$TASK_ID/deliverables"
 ```
 
 ---
 
-**Remember:** Every sub-agent action should be visible in MissionHelm. If it's not logged, it didn't happen!
+## 10) Quality bar
+
+A workflow step is finished only when:
+
+1. change applied,
+2. runtime verification passed,
+3. visibility preserved,
+4. explicit next step or closure recorded.
