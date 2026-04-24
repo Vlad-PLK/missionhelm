@@ -1,8 +1,8 @@
-# MissionHelm Hardening Plan (Orchestrator Scope)
+# La Citadel Hardening Plan (Orchestrator Scope)
 
 > For Hermes: this is a planning-only artifact. No coding in this phase.
 
-Goal: harden runtime reliability and workflow governance for MissionHelm (excluding Playwright/browser testing priority).
+Goal: harden runtime reliability and workflow governance for La Citadel (excluding Playwright/browser testing priority).
 
 Architecture: split hardening into five independent implementation tracks with clear acceptance criteria and rollback notes. Execute each track as a bounded task with verification evidence.
 

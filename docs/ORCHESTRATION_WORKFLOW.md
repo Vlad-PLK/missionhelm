@@ -1,6 +1,6 @@
 # Orchestration Workflow (API + Runtime)
 
-This document is the implementation-level workflow for operating MissionHelm with Hermès and OpenClaw.
+This document is the implementation-level workflow for operating La Citadel with Hermès and OpenClaw.
 
 ---
 

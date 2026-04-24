@@ -1,9 +1,9 @@
-# MissionHelm Production Cutover Plan (Safe Merge from Current Production Runtime)
+# La Citadel Production Cutover Plan (Safe Merge from Current Production Runtime)
 
 > For Hermes: execute in phases, verify each gate, and do not delete rollback artifacts until 7-day stability passes.
 
 Goal
-- Move production runtime identity to MissionHelm without losing credentials, DB state, workspace files, or OpenClaw connectivity.
+- Move production runtime identity to La Citadel without losing credentials, DB state, workspace files, or OpenClaw connectivity.
 
 Current verified baseline
 - Running container: mission-control
@@ -48,10 +48,10 @@ Rollback (Phase 0)
 
 ---
 
-## Phase 1 — Create MissionHelm Runtime Manifests (Compatibility-First)
+## Phase 1 — Create La Citadel Runtime Manifests (Compatibility-First)
 
 Objective
-- Introduce MissionHelm service definitions while keeping data paths and env semantics stable.
+- Introduce La Citadel service definitions while keeping data paths and env semantics stable.
 
 Design choice (recommended)
 - Keep existing volume names initially (mission-control-data, mission-control-workspace)
@@ -92,7 +92,7 @@ Rollback (Phase 1)
 ## Phase 2 — Parallel Staging on Alternate Port (No Traffic Cut)
 
 Objective
-- Run MissionHelm in parallel and prove parity before replacing prod.
+- Run La Citadel in parallel and prove parity before replacing prod.
 
 Steps
 1. Build missionhelm image from current missionhelm-main commit.
@@ -115,7 +115,7 @@ Rollback (Phase 2)
 
 ---
 
-## Phase 3 — Controlled Cutover to MissionHelm
+## Phase 3 — Controlled Cutover to La Citadel
 
 Objective
 - Switch primary runtime from mission-control to missionhelm with rapid rollback capability.
@@ -207,7 +207,7 @@ Rollback (if needed)
 
 ## Scope Separation (Important)
 
-- Public repo identity: MissionHelm (already done)
+- Public repo identity: La Citadel (already done)
 - Production operational identity: migrate safely in phases
 - Keep infrastructure continuity over cosmetic renaming
 

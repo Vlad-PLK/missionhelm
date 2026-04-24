@@ -1,17 +1,19 @@
-# MissionHelm
+# La Citadel
 
-MissionHelm is our **Hermès-first MissionHelm** runtime for orchestrating AI delivery work across projects, workspaces, and agents.
+La Citadel is our **Hermès-first centralized command platform** for orchestrating AI delivery across projects, workspaces, and agents.
 
 It is designed for one job: keep execution moving from intent to verified completion with full operational visibility.
+
+La Citadel positions the system as a single, powerful operations citadel: one control plane, one runtime truth, one place to command execution.
 
 ---
 
 ## What this repository is
 
-MissionHelm combines:
+La Citadel combines:
 
 - **Hermès (operator brain):** intake, triage, dispatch, verification, recovery
-- **MissionHelm (control plane):** dashboard + APIs + workflow enforcement
+- **La Citadel (control plane):** dashboard + APIs + workflow enforcement
 - **OpenClaw (execution runtime):** agent sessions and tool-capable task execution
 - **Session telemetry:** traceable activity, deliverables, and state transitions
 
@@ -31,7 +33,7 @@ This repo is our canonical implementation for that process.
 
 ## Core lifecycle
 
-Task lifecycle in MissionHelm:
+Task lifecycle in La Citadel:
 
 ```text
 pending_dispatch -> planning -> inbox -> assigned -> in_progress -> testing -> review -> done
@@ -58,7 +60,7 @@ A task is considered complete only when:
 
 ## Session model (important)
 
-MissionHelm is session-centric. We track multiple layers:
+La Citadel is session-centric. We track multiple layers:
 
 - **OpenClaw execution sessions** (`openclaw_sessions`) for runtime activity
 - **Sub-agent sessions** registered under task context
@@ -130,7 +132,7 @@ For containerized deployment, use `docker-compose.yml` with persistent volume mo
 
 ## Documentation map
 
-- `ORCHESTRATION.md` — master operator playbook (Hermès + MissionHelm + OpenClaw)
+- `ORCHESTRATION.md` — master operator playbook (Hermès + La Citadel + OpenClaw)
 - `docs/AGENT_PROTOCOL.md` — strict agent reporting protocol and status hygiene
 - `docs/ORCHESTRATION_WORKFLOW.md` — API-level orchestration workflow and receipts
 - `PRODUCTION_SETUP.md` — production deployment baseline
@@ -151,7 +153,7 @@ Never treat configuration as equivalent to verified runtime.
 
 ## Source note
 
-This repository began as a fork of the original open-source Mission Control project and has been reshaped into our own MissionHelm operating model.
+This repository began as a fork of the original open-source Mission Control project and has been reshaped into our own La Citadel operating model.
 
 ---
 

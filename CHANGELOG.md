@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to MissionHelm will be documented in this file.
+All notable changes to La Citadel will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -46,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Gateway Agent Discovery** — Import existing agents from your OpenClaw Gateway into MissionHelm. New "Import from Gateway" button in the agent sidebar opens a discovery modal that lists all Gateway agents, shows which are already imported, and lets you bulk-import with one click. Imported agents display a `GW` badge for provenance tracking.
+- **Gateway Agent Discovery** — Import existing agents from your OpenClaw Gateway into La Citadel. New "Import from Gateway" button in the agent sidebar opens a discovery modal that lists all Gateway agents, shows which are already imported, and lets you bulk-import with one click. Imported agents display a `GW` badge for provenance tracking.
 - **Docker Support** — Production-ready multi-stage Dockerfile, docker-compose.yml with persistent volumes, and `.dockerignore`. Runs as non-root, uses `dumb-init` for signal handling, includes health checks.
 - **Agent Protocol Conventions** — Added `PROGRESS_UPDATE` and `BLOCKED` message formats to the Agent Protocol docs to prevent agent stalling.
 
@@ -73,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Ed25519 Device Identity** — Gateway pairing now uses Ed25519 key-based device identity for secure handshakes.
-- **ARIA Hook** — Real-time agent tracking bridge between ARIA and MissionHelm (`scripts/aria-mc-hook.sh`).
+- **ARIA Hook** — Real-time agent tracking bridge between ARIA and La Citadel (`scripts/aria-mc-hook.sh`).
 - **Planning Poll Endpoint** — New `POST /api/tasks/[id]/planning/poll` for long-poll planning updates.
 - **Retry Dispatch** — New `POST /api/tasks/[id]/planning/retry-dispatch` to retry failed task dispatches.
 - **Auto-Dispatch Module** — `src/lib/auto-dispatch.ts` for automatic task assignment after planning.
@@ -83,7 +83,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Node.js v25 Support** — Updated `better-sqlite3` to v12.6.2 for Node v25 compatibility.
-- **Default Port** — MissionHelm now defaults to port 4000 (previously 3000).
+- **Default Port** — La Citadel now defaults to port 4000 (previously 3000).
 - **Improved Planning Tab** — Enhanced UI with better question rendering, progress tracking, and error handling.
 - **Agent Sidebar Improvements** — Better status display, model selection, and agent management.
 - **Activity Log Overhaul** — Cleaner timeline UI with better type icons and formatting.
@@ -108,7 +108,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🎉 First Official Release
 
-This is the first stable, tested, and working release of MissionHelm.
+This is the first stable, tested, and working release of La Citadel.
 
 ### Added
 

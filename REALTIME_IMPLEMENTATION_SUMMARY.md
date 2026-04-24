@@ -1,12 +1,12 @@
 # Real-Time Integration Implementation Summary
 
 **Date:** January 31, 2026  
-**Project:** MissionHelm  
+**Project:** La Citadel  
 **Status:** ✅ Complete and Production-Ready
 
 ## 🎯 What Was Built
 
-A comprehensive real-time integration system for MissionHelm that provides full transparency and live updates for task orchestration using Server-Sent Events (SSE).
+A comprehensive real-time integration system for La Citadel that provides full transparency and live updates for task orchestration using Server-Sent Events (SSE).
 
 ## 📦 Deliverables
 
@@ -339,7 +339,7 @@ await fetch(`/api/tasks/${task.id}`, {
 
 ### For UI Users
 
-1. Open MissionHelm
+1. Open La Citadel
 2. See SSE connection indicator (green dot in console)
 3. Create/update tasks → Changes appear instantly
 4. Open task detail → Click tabs to see activity/deliverables/sessions

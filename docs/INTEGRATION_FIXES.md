@@ -1,4 +1,4 @@
-# MissionHelm Integration Fixes
+# La Citadel Integration Fixes
 
 **Date:** January 31, 2025  
 **Status:** ✅ COMPLETE
@@ -162,7 +162,7 @@ All criteria met:
 
 ## Usage for Hermès
 
-When spawning a sub-agent to work on MissionHelm tasks:
+When spawning a sub-agent to work on La Citadel tasks:
 
 ```typescript
 import * as orchestrator from '@/lib/orchestration';

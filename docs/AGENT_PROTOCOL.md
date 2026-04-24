@@ -1,6 +1,6 @@
-# Agent Protocol (Hermès + OpenClaw + MissionHelm)
+# Agent Protocol (Hermès + OpenClaw + La Citadel)
 
-This protocol defines how execution agents must report work so MissionHelm remains auditable and actionable.
+This protocol defines how execution agents must report work so La Citadel remains auditable and actionable.
 
 ---
 
@@ -46,7 +46,7 @@ Rules:
 
 ## 3) Lifecycle expectations
 
-MissionHelm lifecycle:
+La Citadel lifecycle:
 
 ```text
 pending_dispatch -> planning -> inbox -> assigned -> in_progress -> testing -> review -> done

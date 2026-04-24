@@ -1,4 +1,4 @@
-# Telegram Dispatch Template Pack (MissionHelm)
+# Telegram Dispatch Template Pack (La Citadel)
 
 Purpose
 - Give Vladimir a copy/paste-ready input system from Telegram so Hermès can dispatch, track, and close work without ambiguity.
@@ -58,7 +58,7 @@ TASK_PACKET
 - definition_of_done:
   - [ ] change applied
   - [ ] verification passed
-  - [ ] activity + deliverable visible in MissionHelm
+  - [ ] activity + deliverable visible in La Citadel
   - [ ] next step or closure note posted
 - subtasks:
   1)
@@ -157,9 +157,9 @@ MISSION_DAY
 - date: 2026-04-22
 - top_outcomes:
   - [P0] Stabilize dispatch quality for all active workspaces
-  - [P0] Finalize MissionHelm production cutover readiness pack
+  - [P0] Finalize La Citadel production cutover readiness pack
   - [P1] Clean task backlog and enforce blocker visibility
-- hard_deadlines: MissionHelm cutover plan review by 16:00
+- hard_deadlines: La Citadel cutover plan review by 16:00
 - non_negotiables: no destructive ops without rollback note
 - constraints: mobile-only decisions today
 - sequencing_rules:

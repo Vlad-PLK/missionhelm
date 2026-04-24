@@ -22,9 +22,9 @@ We acknowledge reports quickly and coordinate a responsible disclosure timeline.
 
 ---
 
-## Baseline Security Controls (MissionHelm)
+## Baseline Security Controls (La Citadel)
 
-MissionHelm ships with these baseline controls:
+La Citadel ships with these baseline controls:
 
 - API auth gate via `MC_API_TOKEN` (middleware-level)
 - Demo mode read-only blocking for mutating API methods

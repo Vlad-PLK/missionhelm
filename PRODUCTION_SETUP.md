@@ -1,6 +1,6 @@
 # Production Setup Guide
 
-This guide walks you through setting up MissionHelm for production use with proper configuration management.
+This guide walks you through setting up La Citadel for production use with proper configuration management.
 
 ## ⚠️ Security First
 
@@ -73,7 +73,7 @@ Visit [http://localhost:4000](http://localhost:4000)
 
 ## ⚙️ Configuration Management
 
-MissionHelm supports configuration via **two methods**:
+La Citadel supports configuration via **two methods**:
 
 ### Method 1: Environment Variables (.env.local)
 
@@ -102,14 +102,14 @@ Access via: **Settings** button (top-right) or `/settings`
 Settings stored in browser localStorage:
 - Workspace base path
 - Projects path
-- MissionHelm API URL
+- La Citadel API URL
 - Default project name
 
 **Priority:** Environment variables override UI settings for server operations.
 
 ## 📁 Workspace Structure
 
-MissionHelm organizes files in a structured workspace:
+La Citadel organizes files in a structured workspace:
 
 ```
 ~/Documents/Shared/              # Base workspace
@@ -119,7 +119,7 @@ MissionHelm organizes files in a structured workspace:
 │   │   ├── docs/               # Project docs
 │   │   └── README.md
 │   └── [PROJECT_NAME_2]/
-└── missionhelm/             # MissionHelm app
+└── missionhelm/             # La Citadel app
     └── missionhelm.db       # Database
 ```
 
@@ -168,7 +168,7 @@ openssl rand -hex 32
 ```
 
 Copy this token to both:
-1. MissionHelm's `.env.local`
+1. La Citadel's `.env.local`
 2. OpenClaw's gateway configuration
 
 ## 🚀 Production Deployment
@@ -219,7 +219,7 @@ ls -la missionhelm.db
 ### 2. Test OpenClaw Connection
 
 1. Start OpenClaw Gateway: `openclaw gateway`
-2. Open MissionHelm: `http://localhost:4000`
+2. Open La Citadel: `http://localhost:4000`
 3. Check status indicator (top-right): Should show **ONLINE** (green)
 
 ### 3. Test Real-Time Updates
@@ -295,10 +295,10 @@ ls -la missionhelm.db
 
 | Setting | Description |
 |---------|-------------|
-| Workspace Base Path | Root directory for all MissionHelm files |
+| Workspace Base Path | Root directory for all La Citadel files |
 | Projects Path | Where individual project folders are created |
 | Default Project Name | Template name for new projects |
-| MissionHelm URL | API endpoint (usually auto-detected) |
+| La Citadel URL | API endpoint (usually auto-detected) |
 
 ## 🎯 Next Steps
 

@@ -1,6 +1,6 @@
 # Approval Governance
 
-Backend approval governance for MissionHelm review completion.
+Backend approval governance for La Citadel review completion.
 
 ## Scope
 

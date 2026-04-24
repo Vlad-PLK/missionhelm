@@ -5,10 +5,10 @@ Scope
 
 Recovered sessions
 1) `20260422_074422_eb84ca` (CLI)
-- Title: Task Assignment Priorities and MissionHelm Readiness
+- Title: Task Assignment Priorities and La Citadel Readiness
 - Core user intent:
   - Start assigning/creating tasks for today's priorities
-  - Confirm MissionHelm readiness for multiple tasks/task groups
+  - Confirm La Citadel readiness for multiple tasks/task groups
   - Define optimal intake format for Vladimir -> Hermès
 - Delivered in-session outcome:
   - Production workflow intake guide created:
@@ -18,11 +18,11 @@ Recovered sessions
 2) `20260422_075317_967875` (CLI)
 - Title: mission-control-description
 - Core user intent:
-  - Rebrand/restructure repo identity toward MissionHelm
-  - Clarify differences between MissionHelm repo and current production runtime
+  - Rebrand/restructure repo identity toward La Citadel
+  - Clarify differences between La Citadel repo and current production runtime
   - Request a safe merge/cutover path
 - Delivered in-session outcome:
-  - MissionHelm production cutover plan created:
+  - La Citadel production cutover plan created:
     - `docs/plans/2026-04-22-missionhelm-prod-cutover-plan.md`
 
 Continuation from Telegram (this session)

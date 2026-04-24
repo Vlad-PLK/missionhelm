@@ -1,11 +1,11 @@
-# MissionHelm Production Workflow Input Guide
+# La Citadel Production Workflow Input Guide
 
 Purpose
-- Define exactly what Hermès needs from Vladimir to run MissionHelm in a production-ready way.
+- Define exactly what Hermès needs from Vladimir to run La Citadel in a production-ready way.
 - Remove ambiguity during task intake, dispatch, execution tracking, and closure.
 
 Core principle
-- Hermès is the MissionHelm orchestrator/operator, not the coding executor.
+- Hermès is the La Citadel orchestrator/operator, not the coding executor.
 - The best results come from clear priorities + atomic tasks + explicit done criteria + fast blocker resolution.
 
 ## 1) Daily control contract (what to send every day)

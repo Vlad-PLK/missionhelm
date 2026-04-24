@@ -1,6 +1,6 @@
 # Demo Deployment Guide
 
-Deploy MissionHelm as a live, read-only demo at `demo.your-domain.example`.
+Deploy La Citadel as a live, read-only demo at `demo.your-domain.example`.
 
 ## Server: your-demo-host
 
@@ -66,7 +66,7 @@ node scripts/demo-seed.js --db ./missionhelm-demo.db
 ```bash
 npm install -g pm2
 
-# Start MissionHelm
+# Start La Citadel
 pm2 start "npx next start -p 4000" --name mc-demo --cwd /var/www/missionhelm-demo
 
 # Start the simulator (generates live activity every 15 seconds)

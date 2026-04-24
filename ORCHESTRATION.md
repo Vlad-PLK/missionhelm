@@ -1,6 +1,6 @@
-# MissionHelm Orchestration Playbook
+# La Citadel Orchestration Playbook
 
-This playbook defines how we operate MissionHelm as a live control plane with Hermès as orchestrator and OpenClaw as execution runtime.
+This playbook defines how we operate La Citadel as a centralized and powerful AI operations citadel, with Hermès as orchestrator and OpenClaw as execution runtime.
 
 ---
 
@@ -18,7 +18,7 @@ This playbook defines how we operate MissionHelm as a live control plane with He
 - Delivers progress through messages and session-level telemetry
 - Does not replace operator review authority
 
-### MissionHelm (control plane)
+### La Citadel (control plane)
 
 - Persists tasks/agents/workspaces/sessions/events
 - Broadcasts activity and status transitions
@@ -67,7 +67,7 @@ Vague completions are rejected.
 
 ## 5) Session discipline
 
-MissionHelm is session-driven:
+La Citadel is session-driven:
 
 - Link execution to an OpenClaw session (`openclaw_sessions`)
 - Register sub-agent sessions under task context when applicable
@@ -99,7 +99,7 @@ If one endpoint fails, continue with partial signal and report the failure expli
 
 ## 7) Day-start operating sequence
 
-1. Confirm MissionHelm + OpenClaw runtime health
+1. Confirm La Citadel + OpenClaw runtime health
 2. Pull workspace/task histograms
 3. Identify stale `assigned`/`in_progress`/`testing` tasks
 4. Validate session-to-task consistency
