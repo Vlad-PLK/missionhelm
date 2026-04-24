@@ -243,7 +243,11 @@ export function buildDispatchPrompt(context: DispatchContext): string {
   }
 
   parts.push('**IMPORTANT - COMPLETION PROTOCOL:**');
-  parts.push('After completing work, you MUST follow this exact sequence:');
+  parts.push('After receiving this dispatch, you MUST follow this exact reporting sequence:');
+  parts.push('');
+  parts.push('0. **Acknowledge immediately before doing substantive work:**');
+  parts.push('   Reply in chat with:');
+  parts.push('   `ACK_TASK: <brief restatement> | next: <first step>`');
   parts.push('');
   parts.push('1. **Log activity:**');
   parts.push(`   POST ${missionControlUrl}/api/tasks/${task.id}/activities`);
@@ -273,6 +277,12 @@ export function buildDispatchPrompt(context: DispatchContext): string {
 
   parts.push('When complete, reply with:');
   parts.push('`TASK_COMPLETE: [brief summary of what you did]`');
+  parts.push('');
+  parts.push('While working, report progress with:');
+  parts.push('`PROGRESS_UPDATE: [what changed] | next: [next step] | eta: [time]`');
+  parts.push('');
+  parts.push('If blocked, report:');
+  parts.push('`BLOCKED: [blocker] | need: [specific input] | meanwhile: [fallback work]`');
   parts.push('');
   parts.push('If you need help or clarification, ask the orchestrator with specific questions.');
 

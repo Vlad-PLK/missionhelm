@@ -430,6 +430,45 @@ const migrations: Migration[] = [
 
       console.log('[Migration 015] Created bulk_operation_reports and task_archives tables');
     }
+  },
+  {
+    id: '016',
+    name: 'add_task_dispatch_runs',
+    up: (db) => {
+      console.log('[Migration 016] Creating task_dispatch_runs table...');
+
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS task_dispatch_runs (
+          id TEXT PRIMARY KEY,
+          task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+          agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+          openclaw_session_id TEXT NOT NULL,
+          session_key TEXT NOT NULL,
+          dispatch_attempt INTEGER NOT NULL DEFAULT 1,
+          dispatch_status TEXT NOT NULL DEFAULT 'queued' CHECK (dispatch_status IN ('queued', 'sent', 'failed', 'superseded')),
+          execution_state TEXT NOT NULL DEFAULT 'queued' CHECK (execution_state IN ('queued', 'dispatched', 'acknowledged', 'executing', 'blocked', 'stalled', 'completed', 'ingestion_failed')),
+          idempotency_key TEXT,
+          acknowledged_at TEXT,
+          execution_started_at TEXT,
+          last_progress_at TEXT,
+          last_runtime_signal_at TEXT,
+          last_runtime_signal_type TEXT,
+          completed_at TEXT,
+          ingestion_status TEXT NOT NULL DEFAULT 'pending' CHECK (ingestion_status IN ('pending', 'ingested', 'failed')),
+          source_summary TEXT,
+          source_metadata TEXT,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now'))
+        );
+      `);
+
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_task_dispatch_runs_task ON task_dispatch_runs(task_id, created_at DESC)`);
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_task_dispatch_runs_agent ON task_dispatch_runs(agent_id, created_at DESC)`);
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_task_dispatch_runs_session ON task_dispatch_runs(openclaw_session_id, created_at DESC)`);
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_task_dispatch_runs_state ON task_dispatch_runs(execution_state, ingestion_status, created_at DESC)`);
+
+      console.log('[Migration 016] Created task_dispatch_runs table');
+    }
   }
 ];
 

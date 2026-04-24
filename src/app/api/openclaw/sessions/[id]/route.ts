@@ -136,7 +136,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     // If status changed to completed, update the agent status too
     if (status === 'completed') {
       if (session.agent_id) {
-        db.prepare('UPDATE agents SET status = ? WHERE id = ?').run('idle', session.agent_id);
+        db.prepare('UPDATE agents SET status = ?, updated_at = ? WHERE id = ?').run('standby', new Date().toISOString(), session.agent_id);
       }
       if (session.task_id) {
         broadcast({
@@ -191,8 +191,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       if (agent && agent.role === 'Sub-Agent') {
         db.prepare('DELETE FROM agents WHERE id = ?').run(agentId);
       } else if (agent) {
-        // Update non-subagent back to idle
-        db.prepare('UPDATE agents SET status = ? WHERE id = ?').run('idle', agentId);
+        // Update non-subagent back to standby
+        db.prepare('UPDATE agents SET status = ?, updated_at = ? WHERE id = ?').run('standby', new Date().toISOString(), agentId);
       }
     }
 

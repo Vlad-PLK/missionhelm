@@ -461,8 +461,12 @@ export class OpenClawClient extends EventEmitter {
     return this.call<OpenClawSessionInfo[]>('sessions.list');
   }
 
-  async getSessionHistory(sessionId: string): Promise<unknown[]> {
-    return this.call<unknown[]>('sessions.history', { session_id: sessionId });
+  async getSessionHistory(sessionKey: string): Promise<unknown[]> {
+    const result = await this.call<{ messages?: unknown[] }>('chat.history', {
+      sessionKey,
+      limit: 200,
+    });
+    return result.messages ?? [];
   }
 
   async sendMessage(sessionId: string, content: string): Promise<void> {

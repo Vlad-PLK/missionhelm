@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { queryOne, queryAll, run } from '@/lib/db';
-import { getOpenClawClient } from '@/lib/openclaw/client';
+import { queryOne, queryAll, run, transaction } from '@/lib/db';
 import { broadcast } from '@/lib/events';
 import { buildDispatchPrompt, fetchDispatchContext } from '@/lib/prompt-templates';
 import type { Task, Agent, OpenClawSession } from '@/lib/types';
 import { APP_RUNTIME_CHANNEL, APP_RUNTIME_SESSION_PREFIX } from '@/lib/branding';
+import {
+  createDispatchRun,
+  ensureAgentHasNoConflictingRun,
+  recordExecutionReceipt,
+  supersedeActiveRunsForTask,
+} from '@/lib/execution-runs';
+import { ensureExecutionMonitorStarted } from '@/lib/execution-monitor';
+import { dispatchRouteDeps } from './deps';
 
 export const dynamic = 'force-dynamic';
 interface RouteParams {
@@ -82,7 +89,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Connect to OpenClaw Gateway
-    const client = getOpenClawClient();
+    const client = dispatchRouteDeps.getOpenClawClient();
     if (!client.isConnected()) {
       try {
         await client.connect();
@@ -109,9 +116,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       const openclawSessionId = `${APP_RUNTIME_SESSION_PREFIX}-${agent.id}`;
       
       run(
-        `INSERT INTO openclaw_sessions (id, agent_id, openclaw_session_id, channel, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [sessionId, agent.id, openclawSessionId, APP_RUNTIME_CHANNEL, 'active', now, now]
+        `INSERT INTO openclaw_sessions (id, agent_id, openclaw_session_id, channel, status, task_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [sessionId, agent.id, openclawSessionId, APP_RUNTIME_CHANNEL, 'active', null, now, now]
       );
 
       session = queryOne<OpenClawSession>(
@@ -134,6 +141,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    const conflictingRun = ensureAgentHasNoConflictingRun(agent.id, task.id);
+    if (conflictingRun) {
+      return NextResponse.json(
+        {
+          error: 'Agent already has an active execution run',
+          message: `Agent ${agent.name} is still bound to task ${conflictingRun.task_id}. Dispatch stopped because exact task/runtime correlation would become ambiguous.`,
+          conflicting_run_id: conflictingRun.id,
+          conflicting_task_id: conflictingRun.task_id,
+        },
+        { status: 409 }
+      );
+    }
+
     // Build task message using enhanced prompt templates
     const context = fetchDispatchContext(id);
     if (!context) {
@@ -151,19 +171,75 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       // Format: {prefix}{openclaw_session_id} where prefix defaults to 'agent:main:'
       const prefix = agent.session_key_prefix || 'agent:main:';
       const sessionKey = `${prefix}${session.openclaw_session_id}`;
+      const idempotencyKey = `dispatch-${id}-${Date.now()}`;
       await client.call('chat.send', {
         sessionKey,
         message: taskMessage,
-        idempotencyKey: `dispatch-${id}-${Date.now()}`
+        idempotencyKey
       });
 
-      // Update task status to in_progress
-      run(
-        'UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?',
-        ['in_progress', now, id]
-      );
+      let dispatchRunId: string | null = null;
+      transaction(() => {
+        supersedeActiveRunsForTask(task.id, now);
+        run(
+          'UPDATE openclaw_sessions SET task_id = ?, updated_at = ? WHERE id = ?',
+          [task.id, now, session!.id]
+        );
 
-      // Broadcast task update
+        const dispatchRun = createDispatchRun({
+          taskId: task.id,
+          agentId: agent.id,
+          openclawSessionId: session!.openclaw_session_id,
+          sessionKey,
+          idempotencyKey,
+          now,
+        });
+        dispatchRunId = dispatchRun.id;
+
+        run(
+          'UPDATE agents SET status = ?, updated_at = ? WHERE id = ?',
+          ['working', now, agent.id]
+        );
+
+        run(
+          `INSERT INTO events (id, type, agent_id, task_id, message, metadata, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            uuidv4(),
+            'task_dispatched',
+            agent.id,
+            task.id,
+            `Task "${task.title}" dispatched to ${agent.name}`,
+            JSON.stringify({
+              execution_run_id: dispatchRun.id,
+              session_id: session!.openclaw_session_id,
+              session_key: sessionKey,
+              dispatch_attempt: dispatchRun.dispatch_attempt,
+              idempotency_key: idempotencyKey,
+            }),
+            now,
+          ]
+        );
+
+        recordExecutionReceipt({
+          taskId: task.id,
+          agentId: agent.id,
+          runId: dispatchRun.id,
+          sessionId: session!.openclaw_session_id,
+          sessionKey,
+          receiptType: 'dispatch_sent',
+          message: `Dispatch sent to ${agent.name} (attempt ${dispatchRun.dispatch_attempt})`,
+          sourceType: 'dispatch',
+          sourceFingerprint: idempotencyKey,
+          sourceTimestamp: now,
+          createdAt: now,
+          metadata: {
+            dispatch_attempt: dispatchRun.dispatch_attempt,
+            idempotency_key: idempotencyKey,
+          },
+        });
+      });
+
       const updatedTask = queryOne<Task>('SELECT * FROM tasks WHERE id = ?', [id]);
       if (updatedTask) {
         broadcast({
@@ -172,34 +248,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         });
       }
 
-      // Update agent status to working
-      run(
-        'UPDATE agents SET status = ?, updated_at = ? WHERE id = ?',
-        ['working', now, agent.id]
-      );
-
-      // Log dispatch event to events table
-      const eventId = uuidv4();
-      run(
-        `INSERT INTO events (id, type, agent_id, task_id, message, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [eventId, 'task_dispatched', agent.id, task.id, `Task "${task.title}" dispatched to ${agent.name}`, now]
-      );
-
-      // Log dispatch activity to task_activities table (for Activity tab)
-      const activityId = crypto.randomUUID();
-      run(
-        `INSERT INTO task_activities (id, task_id, agent_id, activity_type, message, created_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [activityId, task.id, agent.id, 'status_changed', `Task dispatched to ${agent.name} - Agent is now working on this task`, now]
-      );
+      ensureExecutionMonitorStarted();
 
       return NextResponse.json({
         success: true,
         task_id: id,
         agent_id: agent.id,
+        execution_run_id: dispatchRunId,
         session_id: session.openclaw_session_id,
-        message: 'Task dispatched to agent'
+        message: 'Task dispatch accepted and execution run recorded'
       });
     } catch (err) {
       console.error('Failed to send message to agent:', err);

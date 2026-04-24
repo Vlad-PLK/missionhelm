@@ -179,6 +179,90 @@ export interface OpenClawSession {
   updated_at: string;
 }
 
+export type TaskDispatchStatus = 'queued' | 'sent' | 'failed' | 'superseded';
+
+export type TaskExecutionState =
+  | 'queued'
+  | 'dispatched'
+  | 'acknowledged'
+  | 'executing'
+  | 'blocked'
+  | 'stalled'
+  | 'completed'
+  | 'ingestion_failed';
+
+export type TaskExecutionIngestionStatus = 'pending' | 'ingested' | 'failed';
+
+export type RuntimeReceiptType =
+  | 'dispatch_sent'
+  | 'ack_received'
+  | 'execution_started'
+  | 'progress_seen'
+  | 'blocker_seen'
+  | 'completion_seen'
+  | 'completion_ingested'
+  | 'stalled_execution_detected';
+
+export interface TaskDispatchRun {
+  id: string;
+  task_id: string;
+  agent_id: string;
+  openclaw_session_id: string;
+  session_key: string;
+  dispatch_attempt: number;
+  dispatch_status: TaskDispatchStatus;
+  execution_state: TaskExecutionState;
+  idempotency_key?: string | null;
+  acknowledged_at?: string | null;
+  execution_started_at?: string | null;
+  last_progress_at?: string | null;
+  last_runtime_signal_at?: string | null;
+  last_runtime_signal_type?: string | null;
+  completed_at?: string | null;
+  ingestion_status: TaskExecutionIngestionStatus;
+  source_summary?: string | null;
+  source_metadata?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ExecutionMonitorCycleReason = 'startup' | 'interval' | 'manual' | 'route';
+
+export interface ExecutionMonitorRunError {
+  run_id: string;
+  message: string;
+}
+
+export interface ExecutionMonitorCycleSummary {
+  reason: ExecutionMonitorCycleReason;
+  forced: boolean;
+  started_at: string;
+  completed_at: string;
+  active_run_count: number;
+  processed_run_count: number;
+  processed_run_ids: string[];
+  skipped_run_ids: string[];
+  incident_count: number;
+  run_errors: ExecutionMonitorRunError[];
+}
+
+export interface ExecutionMonitorStatus {
+  enabled: boolean;
+  started: boolean;
+  running: boolean;
+  interval_ms: number;
+  max_runs_per_cycle: number;
+  last_started_at: string | null;
+  last_completed_at: string | null;
+  last_error: string | null;
+  last_error_at: string | null;
+  last_cycle_reason: ExecutionMonitorCycleReason | null;
+  last_cycle_summary: ExecutionMonitorCycleSummary | null;
+  total_cycles: number;
+  total_failures: number;
+  next_scheduled_at: string | null;
+}
+
 export type ActivityType = 'spawned' | 'updated' | 'completed' | 'file_created' | 'status_changed' | 'milestone_completed' | 'phase_changed' | 'test_passed' | 'test_failed' | 'blocker_identified' | 'blocker_escalated' | 'blocker_resolved' | 'staleness_detected' | 'staleness_cleared';
 
 export interface TaskMilestone {

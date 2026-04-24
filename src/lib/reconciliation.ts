@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { broadcast } from '@/lib/events';
 import { queryAll, queryOne, run, transaction } from '@/lib/db';
 import type { AgentStatus, Task, TaskActivity, TaskStatus } from '@/lib/types';
+import { runExecutionWatchdog } from '@/lib/execution-watchdog';
 
 export type ReconciliationMode = 'dry-run' | 'apply';
 
@@ -484,6 +485,13 @@ export async function runReconciliation(params: {
     applyCorrections(report.runId, report.corrections, appliedAt);
     report.completedAt = appliedAt;
     report.counts.applied = report.corrections.length;
+  }
+
+  if (params.mode === 'apply') {
+    await runExecutionWatchdog({
+      workspaceId: params.scope.workspaceId,
+    });
+    report.completedAt = new Date().toISOString();
   }
 
   if (params.writeArtifact) {

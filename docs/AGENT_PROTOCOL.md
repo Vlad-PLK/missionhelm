@@ -19,6 +19,12 @@ This protocol guarantees:
 
 ## 2) Required message formats
 
+### Acknowledgement
+
+```text
+ACK_TASK: <brief restatement> | next: <first step>
+```
+
 ### Completion
 
 ```text
@@ -41,6 +47,7 @@ Rules:
 - No empty completions (`TASK_COMPLETE: done`) 
 - No silent stalls
 - No blocker report without parallel fallback work
+- Autonomous monitoring ingests only explicit protocol messages; vague assistant chatter is not treated as acknowledgement
 
 ---
 
@@ -54,7 +61,7 @@ pending_dispatch -> planning -> inbox -> assigned -> in_progress -> testing -> r
 
 Execution expectations:
 
-- `assigned` -> `in_progress`: first meaningful work signal expected quickly
+- `assigned` -> `in_progress`: explicit `ACK_TASK` expected quickly, followed by first meaningful work signal
 - `in_progress`: continuous `PROGRESS_UPDATE` cadence
 - `testing`: verification evidence recorded
 - `review`: task is materially complete and reviewable

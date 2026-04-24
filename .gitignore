@@ -55,6 +55,7 @@ next-env.d.ts
 # local knowledge/state (never publish)
 .brv/
 .nightly/
+.omx/
 artifacts/
 workspaces/
 *.log

@@ -54,6 +54,20 @@ LA_CITADEL_URL=http://localhost:4000
 
 Legacy aliases remain supported for backward compatibility: `DATABASE_PATH`, `OPENCLAW_GATEWAY_URL`, `OPENCLAW_GATEWAY_TOKEN`, `WORKSPACE_BASE_PATH`, `PROJECTS_PATH`, and `MISSION_CONTROL_URL`.
 
+Execution monitoring environment knobs:
+
+```bash
+MC_EXECUTION_MONITOR_ENABLED=true
+MC_EXECUTION_MONITOR_POLL_INTERVAL_MS=10000
+MC_EXECUTION_MONITOR_MAX_RUNS_PER_CYCLE=10
+MC_EXECUTION_ACK_TIMEOUT_MINUTES=5
+MC_EXECUTION_PROGRESS_TIMEOUT_MINUTES=15
+MC_EXECUTION_NO_DELTA_TIMEOUT_MINUTES=30
+MC_EXECUTION_COMPLETION_INGESTION_TIMEOUT_MINUTES=5
+```
+
+In production, the autonomous execution monitor defaults to enabled unless explicitly disabled. In non-production environments, set `MC_EXECUTION_MONITOR_ENABLED=true` if you want the background poller active.
+
 ### 4. Initialize Database
 
 ```bash

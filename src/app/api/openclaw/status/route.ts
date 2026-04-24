@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getOpenClawClient } from '@/lib/openclaw/client';
 import { getOpenClawGatewayUrl } from '@/lib/branding';
+import { ensureExecutionMonitorStarted, getExecutionMonitorStatus } from '@/lib/execution-monitor';
 
 export const dynamic = 'force-dynamic';
 
 // GET /api/openclaw/status - Check OpenClaw connection status
 export async function GET() {
   try {
+    ensureExecutionMonitorStarted();
+    const executionMonitor = getExecutionMonitorStatus();
     const client = getOpenClawClient();
 
     if (!client.isConnected()) {
@@ -17,6 +20,7 @@ export async function GET() {
           connected: false,
           error: 'Failed to connect to OpenClaw Gateway',
           gateway_url: getOpenClawGatewayUrl(),
+          execution_monitor: executionMonitor,
         });
       }
     }
@@ -29,12 +33,14 @@ export async function GET() {
         sessions_count: sessions.length,
         sessions: sessions,
         gateway_url: getOpenClawGatewayUrl(),
+        execution_monitor: executionMonitor,
       });
     } catch (err) {
       return NextResponse.json({
         connected: true,
         error: 'Connected but failed to list sessions',
         gateway_url: getOpenClawGatewayUrl(),
+        execution_monitor: executionMonitor,
       });
     }
   } catch (error) {
@@ -43,6 +49,7 @@ export async function GET() {
       {
         connected: false,
         error: 'Internal server error',
+        execution_monitor: getExecutionMonitorStatus(),
       },
       { status: 500 }
     );

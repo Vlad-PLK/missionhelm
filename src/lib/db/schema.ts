@@ -155,6 +155,30 @@ CREATE TABLE IF NOT EXISTS openclaw_sessions (
   updated_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Task dispatch/execution binding records
+CREATE TABLE IF NOT EXISTS task_dispatch_runs (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+  openclaw_session_id TEXT NOT NULL,
+  session_key TEXT NOT NULL,
+  dispatch_attempt INTEGER NOT NULL DEFAULT 1,
+  dispatch_status TEXT NOT NULL DEFAULT 'queued' CHECK (dispatch_status IN ('queued', 'sent', 'failed', 'superseded')),
+  execution_state TEXT NOT NULL DEFAULT 'queued' CHECK (execution_state IN ('queued', 'dispatched', 'acknowledged', 'executing', 'blocked', 'stalled', 'completed', 'ingestion_failed')),
+  idempotency_key TEXT,
+  acknowledged_at TEXT,
+  execution_started_at TEXT,
+  last_progress_at TEXT,
+  last_runtime_signal_at TEXT,
+  last_runtime_signal_type TEXT,
+  completed_at TEXT,
+  ingestion_status TEXT NOT NULL DEFAULT 'pending' CHECK (ingestion_status IN ('pending', 'ingested', 'failed')),
+  source_summary TEXT,
+  source_metadata TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
 -- Task activities table (for real-time activity log)
 CREATE TABLE IF NOT EXISTS task_activities (
   id TEXT PRIMARY KEY,
@@ -239,6 +263,10 @@ CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
 CREATE INDEX IF NOT EXISTS idx_activities_task ON task_activities(task_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_deliverables_task ON task_deliverables(task_id);
 CREATE INDEX IF NOT EXISTS idx_openclaw_sessions_task ON openclaw_sessions(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_dispatch_runs_task ON task_dispatch_runs(task_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_task_dispatch_runs_agent ON task_dispatch_runs(agent_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_task_dispatch_runs_session ON task_dispatch_runs(openclaw_session_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_task_dispatch_runs_state ON task_dispatch_runs(execution_state, ingestion_status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_planning_questions_task ON planning_questions(task_id, sort_order);
 CREATE INDEX IF NOT EXISTS idx_milestones_task ON task_milestones(task_id, order_index);
 CREATE INDEX IF NOT EXISTS idx_progress_task ON task_progress(task_id);

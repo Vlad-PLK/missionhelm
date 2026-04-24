@@ -142,12 +142,38 @@ function parseBooleanEnv(value: string | undefined): boolean {
   return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
 }
 
+function parsePositiveIntegerEnv(value: string | undefined, fallback: number): number {
+  const parsed = Number.parseInt(value ?? '', 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallback;
+  }
+
+  return parsed;
+}
+
 export function isApprovalTestEvidenceRequired(): boolean {
   return parseBooleanEnv(process.env.MC_APPROVAL_REQUIRE_TEST_EVIDENCE);
 }
 
 export function isApprovalSoftEnforcementEnabled(): boolean {
   return parseBooleanEnv(process.env.MC_APPROVAL_SOFT_ENFORCEMENT);
+}
+
+export function isExecutionMonitorEnabled(): boolean {
+  const raw = process.env.MC_EXECUTION_MONITOR_ENABLED;
+  if (raw === undefined || raw === '') {
+    return process.env.NODE_ENV === 'production';
+  }
+
+  return parseBooleanEnv(raw);
+}
+
+export function getExecutionMonitorPollIntervalMs(): number {
+  return parsePositiveIntegerEnv(process.env.MC_EXECUTION_MONITOR_POLL_INTERVAL_MS, 10_000);
+}
+
+export function getExecutionMonitorMaxRunsPerCycle(): number {
+  return parsePositiveIntegerEnv(process.env.MC_EXECUTION_MONITOR_MAX_RUNS_PER_CYCLE, 10);
 }
 
 /**
