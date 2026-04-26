@@ -353,66 +353,70 @@ function normalizeRuntimeSignals(messages: RuntimeTranscriptMessage[]): RuntimeS
     }
 
     const rawText = message.text;
+    const lines = rawText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
 
-    if (/^TASK_COMPLETE:\s*/i.test(rawText)) {
-      signals.push({
-        receiptType: 'completion_seen' as const,
-        message: 'Runtime completion signal received',
-        sourceTimestamp: message.sourceTimestamp,
-        sourceFingerprint: message.sourceFingerprint,
-        rawText,
-        parsed: parseCompletionMessage(rawText),
-      });
-      continue;
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+      const line = lines[lineIndex];
+      const fingerprintBase = `${message.sourceFingerprint}:${lineIndex}`;
+
+      if (/^TASK_COMPLETE:\s*/i.test(line)) {
+        signals.push({
+          receiptType: 'completion_seen' as const,
+          message: 'Runtime completion signal received',
+          sourceTimestamp: message.sourceTimestamp,
+          sourceFingerprint: `${fingerprintBase}:completion_seen`,
+          rawText: line,
+          parsed: parseCompletionMessage(line),
+        });
+        continue;
+      }
+
+      if (/^BLOCKED:\s*/i.test(line)) {
+        signals.push({
+          receiptType: 'blocker_seen' as const,
+          message: line,
+          sourceTimestamp: message.sourceTimestamp,
+          sourceFingerprint: `${fingerprintBase}:blocker_seen`,
+          rawText: line,
+        });
+        continue;
+      }
+
+      if (/^PROGRESS_UPDATE:\s*/i.test(line)) {
+        signals.push({
+          receiptType: 'progress_seen' as const,
+          message: line,
+          sourceTimestamp: message.sourceTimestamp,
+          sourceFingerprint: `${fingerprintBase}:progress_seen`,
+          rawText: line,
+        });
+        continue;
+      }
+
+      if (ACK_PATTERNS.some((pattern) => pattern.test(line))) {
+        signals.push({
+          receiptType: 'ack_received' as const,
+          message: line,
+          sourceTimestamp: message.sourceTimestamp,
+          sourceFingerprint: `${fingerprintBase}:ack_received`,
+          rawText: line,
+        });
+        continue;
+      }
+
+      if (EXEC_STARTED_PATTERNS.some((pattern) => pattern.test(line))) {
+        signals.push({
+          receiptType: 'execution_started' as const,
+          message: line,
+          sourceTimestamp: message.sourceTimestamp,
+          sourceFingerprint: `${fingerprintBase}:execution_started`,
+          rawText: line,
+        });
+      }
     }
-
-    if (/^BLOCKED:\s*/i.test(rawText)) {
-      signals.push({
-        receiptType: 'blocker_seen' as const,
-        message: rawText,
-        sourceTimestamp: message.sourceTimestamp,
-        sourceFingerprint: message.sourceFingerprint,
-        rawText,
-      });
-      continue;
-    }
-
-    if (/^PROGRESS_UPDATE:\s*/i.test(rawText)) {
-      signals.push({
-        receiptType: 'progress_seen' as const,
-        message: rawText,
-        sourceTimestamp: message.sourceTimestamp,
-        sourceFingerprint: message.sourceFingerprint,
-        rawText,
-      });
-      continue;
-    }
-
-    if (ACK_PATTERNS.some((pattern) => pattern.test(rawText))) {
-      signals.push({
-        receiptType: 'ack_received' as const,
-        message: rawText,
-        sourceTimestamp: message.sourceTimestamp,
-        sourceFingerprint: message.sourceFingerprint,
-        rawText,
-      });
-      continue;
-    }
-
-    if (EXEC_STARTED_PATTERNS.some((pattern) => pattern.test(rawText))) {
-      signals.push({
-        receiptType: 'execution_started' as const,
-        message: rawText,
-        sourceTimestamp: message.sourceTimestamp,
-        sourceFingerprint: message.sourceFingerprint,
-        rawText,
-      });
-      continue;
-    }
-
-    // Ignore unstructured assistant chatter for execution-state transitions.
-    // Enforce explicit protocol tokens (ACK/EXEC_STARTED/PROGRESS_UPDATE/BLOCKED/TASK_COMPLETE).
-    continue;
   }
 
   return signals;
