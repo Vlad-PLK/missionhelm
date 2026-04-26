@@ -458,7 +458,14 @@ export class OpenClawClient extends EventEmitter {
 
   // Session management methods
   async listSessions(): Promise<OpenClawSessionInfo[]> {
-    return this.call<OpenClawSessionInfo[]>('sessions.list');
+    const result = await this.call<unknown>('sessions.list');
+    if (Array.isArray(result)) {
+      return result as OpenClawSessionInfo[];
+    }
+    if (result && typeof result === 'object' && Array.isArray((result as { sessions?: unknown[] }).sessions)) {
+      return (result as { sessions: OpenClawSessionInfo[] }).sessions;
+    }
+    return [];
   }
 
   async getSessionHistory(sessionKey: string): Promise<unknown[]> {
@@ -469,8 +476,12 @@ export class OpenClawClient extends EventEmitter {
     return result.messages ?? [];
   }
 
-  async sendMessage(sessionId: string, content: string): Promise<void> {
-    await this.call('sessions.send', { session_id: sessionId, content });
+  async sendMessage(sessionKey: string, content: string, idempotencyKey?: string): Promise<void> {
+    await this.call('chat.send', {
+      sessionKey,
+      message: content,
+      idempotencyKey: idempotencyKey ?? `api-send-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
+    });
   }
 
   async createSession(channel: string, peer?: string): Promise<OpenClawSessionInfo> {

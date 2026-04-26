@@ -1,4 +1,6 @@
 import { createHash } from 'crypto';
+import { promises as fs } from 'fs';
+import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { broadcast } from '@/lib/events';
 import { queryOne, run, transaction } from '@/lib/db';
@@ -20,9 +22,9 @@ import type {
 type HistoryMessage = {
   role: string;
   content: unknown;
-  createdAt?: string;
-  created_at?: string;
-  timestamp?: string;
+  createdAt?: string | number;
+  created_at?: string | number;
+  timestamp?: string | number;
 };
 
 type HistoryResponse = {
@@ -50,11 +52,16 @@ type RuntimeSignal = {
 };
 
 const ACK_PATTERNS = [/^(ACK_TASK|TASK_ACK|ACKNOWLEDGED|ACK)\s*:/i];
+const EXEC_STARTED_PATTERNS = [/^EXEC_STARTED\s*:/i];
+
+type OpenClawSessionListResponse = {
+  sessions?: Array<Record<string, unknown>>;
+};
 
 type OpenClawHistoryClient = {
   isConnected(): boolean;
   connect(): Promise<void>;
-  call<T>(method: string, params: Record<string, unknown>): Promise<T>;
+  call<T>(method: string, params?: Record<string, unknown>): Promise<T>;
 };
 
 function textFromContent(content: unknown): string {
@@ -91,13 +98,41 @@ function buildTranscriptFingerprint(text: string, occurrence: number): string {
     .slice(0, 24);
 }
 
-function parseIsoMs(value: string | null | undefined): number | null {
-  if (!value) {
+function parseIsoMs(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined) {
     return null;
   }
 
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? null : parsed;
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    // Heuristic: values < 1e12 are likely epoch seconds, otherwise epoch ms.
+    return value < 1e12 ? value * 1000 : value;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    const numeric = Number(trimmed);
+    if (Number.isFinite(numeric)) {
+      return numeric < 1e12 ? numeric * 1000 : numeric;
+    }
+
+    const parsed = Date.parse(trimmed);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  return null;
+}
+
+function normalizeSourceTimestamp(value: unknown): string | null {
+  const ms = parseIsoMs(value as string | number | null | undefined);
+  if (ms === null) {
+    return null;
+  }
+
+  return new Date(ms).toISOString();
 }
 
 function parseCompletionMessage(rawText: string): {
@@ -152,6 +187,110 @@ function inferDeliverableType(entry: string): TaskDeliverable['deliverable_type'
   return 'artifact';
 }
 
+function inferSessionIdFromListPayload(payload: unknown, sessionKey: string): string | null {
+  const candidates = Array.isArray(payload)
+    ? payload
+    : (payload && typeof payload === 'object' && Array.isArray((payload as OpenClawSessionListResponse).sessions)
+        ? (payload as OpenClawSessionListResponse).sessions
+        : []);
+
+  for (const candidate of candidates as Array<Record<string, unknown>>) {
+    const key = String(candidate.key ?? candidate.sessionKey ?? candidate.session_key ?? '');
+    if (key !== sessionKey) {
+      continue;
+    }
+
+    const sessionId = candidate.sessionId ?? candidate.session_id ?? candidate.id;
+    if (typeof sessionId === 'string' && sessionId.trim()) {
+      return sessionId.trim();
+    }
+  }
+
+  return null;
+}
+
+async function loadTranscriptFromLocalSessionFile(params: {
+  sessionKey: string;
+  client: OpenClawHistoryClient;
+}): Promise<RuntimeTranscriptMessage[]> {
+  let sessionId: string | null = null;
+
+  try {
+    const sessionsPayload = await params.client.call<unknown>('sessions.list');
+    sessionId = inferSessionIdFromListPayload(sessionsPayload, params.sessionKey);
+  } catch {
+    return [];
+  }
+
+  if (!sessionId) {
+    return [];
+  }
+
+  const home = process.env.HOME || process.env.USERPROFILE;
+  if (!home) {
+    return [];
+  }
+
+  const filePath = path.join(home, '.openclaw', 'agents', 'main', 'sessions', `${sessionId}.jsonl`);
+  let raw: string;
+  try {
+    raw = await fs.readFile(filePath, 'utf8');
+  } catch {
+    return [];
+  }
+
+  const transcript: RuntimeTranscriptMessage[] = [];
+  const seenOccurrences = new Map<string, number>();
+
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      continue;
+    }
+
+    if (!parsed || typeof parsed !== 'object') {
+      continue;
+    }
+
+    const envelope = parsed as Record<string, unknown>;
+    if (envelope.type !== 'message') {
+      continue;
+    }
+
+    const message = envelope.message as Record<string, unknown> | undefined;
+    const role = typeof message?.role === 'string' ? message.role : undefined;
+    const text = textFromContent(message?.content).trim();
+    if (!role || !text) {
+      continue;
+    }
+
+    const occurrence = (seenOccurrences.get(text) ?? 0) + 1;
+    seenOccurrences.set(text, occurrence);
+    const sourceTimestamp =
+      normalizeSourceTimestamp(envelope.timestamp)
+      || normalizeSourceTimestamp(message?.timestamp)
+      || normalizeSourceTimestamp(message?.createdAt)
+      || normalizeSourceTimestamp(message?.created_at)
+      || null;
+
+    transcript.push({
+      role,
+      text,
+      sourceTimestamp,
+      sourceFingerprint: buildTranscriptFingerprint(text, occurrence),
+    });
+  }
+
+  return transcript;
+}
+
 export async function getRuntimeTranscriptForSession(
   sessionKey: string,
   client: OpenClawHistoryClient = getOpenClawClient()
@@ -160,15 +299,19 @@ export async function getRuntimeTranscriptForSession(
     await client.connect();
   }
 
-  const response = await client.call<HistoryResponse>('chat.history', {
-    sessionKey,
-    limit: 200,
-  });
+  let messages: HistoryMessage[] = [];
+  try {
+    const response = await client.call<HistoryResponse>('chat.history', {
+      sessionKey,
+      limit: 200,
+    });
+    messages = response.messages ?? [];
+  } catch {
+    messages = [];
+  }
 
-  const messages = response.messages ?? [];
   const seenOccurrences = new Map<string, number>();
-
-  return messages
+  const primaryTranscript = messages
     .map((message) => {
       const text = textFromContent(message.content).trim();
       if (!text) {
@@ -181,11 +324,24 @@ export async function getRuntimeTranscriptForSession(
       return {
         role: message.role,
         text,
-        sourceTimestamp: message.timestamp ?? message.createdAt ?? message.created_at ?? null,
+        sourceTimestamp:
+          normalizeSourceTimestamp(message.timestamp)
+          || normalizeSourceTimestamp(message.createdAt)
+          || normalizeSourceTimestamp(message.created_at)
+          || null,
         sourceFingerprint: buildTranscriptFingerprint(text, occurrence),
       };
     })
     .filter((message): message is RuntimeTranscriptMessage => message !== null);
+
+  if (primaryTranscript.length > 0) {
+    return primaryTranscript;
+  }
+
+  return loadTranscriptFromLocalSessionFile({
+    sessionKey,
+    client,
+  });
 }
 
 function normalizeRuntimeSignals(messages: RuntimeTranscriptMessage[]): RuntimeSignal[] {
@@ -243,13 +399,20 @@ function normalizeRuntimeSignals(messages: RuntimeTranscriptMessage[]): RuntimeS
       continue;
     }
 
-    signals.push({
-      receiptType: 'execution_started' as const,
-      message: rawText,
-      sourceTimestamp: message.sourceTimestamp,
-      sourceFingerprint: message.sourceFingerprint,
-      rawText,
-    });
+    if (EXEC_STARTED_PATTERNS.some((pattern) => pattern.test(rawText))) {
+      signals.push({
+        receiptType: 'execution_started' as const,
+        message: rawText,
+        sourceTimestamp: message.sourceTimestamp,
+        sourceFingerprint: message.sourceFingerprint,
+        rawText,
+      });
+      continue;
+    }
+
+    // Ignore unstructured assistant chatter for execution-state transitions.
+    // Enforce explicit protocol tokens (ACK/EXEC_STARTED/PROGRESS_UPDATE/BLOCKED/TASK_COMPLETE).
+    continue;
   }
 
   return signals;

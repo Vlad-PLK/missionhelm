@@ -248,7 +248,7 @@ export default function WorkspacePage() {
   const tasksInQueue = taskSnapshot.filter((task) => task.status !== 'done' && task.status !== 'review').length;
 
   return (
-    <div className="h-screen flex flex-col bg-mc-bg overflow-hidden">
+    <div className="min-h-[100dvh] flex flex-col bg-mc-bg">
       <Header
         workspace={workspace}
         statsOverride={{
@@ -275,7 +275,7 @@ export default function WorkspacePage() {
         queueHref="#workspace-queue"
       />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex min-h-[70dvh] flex-1 overflow-hidden lg:min-h-[42rem]">
         {/* Desktop Layout: 3 columns */}
         <div className="hidden lg:flex flex-1 overflow-hidden">
           {/* Agents Sidebar */}

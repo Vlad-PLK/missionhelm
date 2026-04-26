@@ -74,11 +74,46 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
+    const db = getDb();
+    const mappedSession = db.prepare(
+      `SELECT os.openclaw_session_id, a.session_key_prefix
+       FROM openclaw_sessions os
+       LEFT JOIN agents a ON a.id = os.agent_id
+       WHERE os.openclaw_session_id = ? OR os.id = ?
+       ORDER BY os.created_at DESC
+       LIMIT 1`
+    ).get(id, id) as { openclaw_session_id?: string; session_key_prefix?: string | null } | undefined;
+
+    let sessionKey: string | null = null;
+    if (id.startsWith('agent:')) {
+      sessionKey = id;
+    } else if (mappedSession?.openclaw_session_id) {
+      const prefix = mappedSession.session_key_prefix?.trim() || 'agent:main:';
+      sessionKey = `${prefix}${mappedSession.openclaw_session_id}`;
+    } else {
+      const sessions = await client.listSessions();
+      const matched = sessions.find((session) => {
+        const raw = session as unknown as { id?: unknown; sessionId?: unknown };
+        const candidateId = String(raw.id ?? raw.sessionId ?? '');
+        return candidateId === id;
+      });
+      const matchedRaw = matched as unknown as { key?: unknown; sessionKey?: unknown } | undefined;
+      const key = matchedRaw ? String(matchedRaw.key ?? matchedRaw.sessionKey ?? '') : '';
+      sessionKey = key || null;
+    }
+
+    if (!sessionKey) {
+      return NextResponse.json(
+        { error: 'Session not found' },
+        { status: 404 }
+      );
+    }
+
     // Prefix message so the agent knows the source UI/runtime.
     const prefixedContent = `[${APP_DISPLAY_NAME}] ${content}`;
-    await client.sendMessage(id, prefixedContent);
+    await client.sendMessage(sessionKey, prefixedContent, `api-session-send-${Date.now()}`);
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, session_key: sessionKey });
   } catch (error) {
     console.error('Failed to send message to OpenClaw session:', error);
     return NextResponse.json(

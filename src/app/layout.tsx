@@ -1,9 +1,17 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import './globals.css';
-import { JetBrains_Mono } from 'next/font/google';
+import { JetBrains_Mono, Outfit } from 'next/font/google';
 import DemoBanner from '@/components/DemoBanner';
 import { Toaster } from 'sonner';
 import { APP_DISPLAY_NAME } from '@/lib/branding';
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  variable: '--font-ui-sans',
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+});
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
@@ -23,14 +31,14 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <html lang="en" className={jetbrainsMono.variable}>
+    <html lang="en" className={`${outfit.variable} ${jetbrainsMono.variable}`}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </head>
-      <body className={`${jetbrainsMono.className} bg-mc-bg text-mc-text min-h-screen touch-action-manipulation`}>
+      <body className={`${outfit.className} bg-mc-bg text-mc-text min-h-screen touch-action-manipulation`}>
         <DemoBanner />
         <Toaster 
           position="bottom-center" 

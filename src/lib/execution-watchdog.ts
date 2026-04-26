@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { broadcast } from '@/lib/events';
 import { queryOne, run, transaction } from '@/lib/db';
 import {
   getExecutionRunById,
@@ -12,6 +13,7 @@ import type { Task, TaskDispatchRun } from '@/lib/types';
 
 export type ExecutionWatchdogRuleId =
   | 'dispatched_no_ack'
+  | 'ack_missing_exec_started'
   | 'ack_no_progress'
   | 'in_progress_no_delta'
   | 'completion_not_ingested'
@@ -49,6 +51,64 @@ function minutesSince(value: string | null | undefined, nowMs: number): number |
 function threshold(envName: string, fallback: number): number {
   const parsed = Number.parseInt(process.env[envName] ?? '', 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function isStallAutoRecoveryEnabled(): boolean {
+  const raw = (process.env.MC_EXECUTION_STALL_AUTO_RECOVERY ?? 'true').trim().toLowerCase();
+  return !['0', 'false', 'no', 'off'].includes(raw);
+}
+
+function stallRecoveryStatus(): 'planning' | 'inbox' {
+  const raw = (process.env.MC_EXECUTION_STALL_RECOVERY_STATUS ?? 'planning').trim().toLowerCase();
+  return raw === 'inbox' ? 'inbox' : 'planning';
+}
+
+function applyStallRecovery(params: {
+  run: TaskDispatchRun;
+  task: Task;
+  rule: ExecutionWatchdogRuleId;
+  detectedAt: string;
+  reason: string;
+}): void {
+  if (!isStallAutoRecoveryEnabled()) {
+    return;
+  }
+
+  if (!['dispatched_no_ack', 'ack_missing_exec_started', 'ack_no_progress', 'runtime_signal_without_receipt'].includes(params.rule)) {
+    return;
+  }
+
+  const nextStatus = stallRecoveryStatus();
+  const reason = `[blocked] Auto-recovery parked task after watchdog ${params.rule}: ${params.reason}`;
+
+  run(
+    `UPDATE tasks
+     SET status = ?, status_reason = ?, updated_at = ?
+     WHERE id = ? AND status NOT IN ('done')`,
+    [nextStatus, reason, params.detectedAt, params.task.id]
+  );
+
+  run(
+    `UPDATE task_dispatch_runs
+     SET dispatch_status = 'superseded', updated_at = ?
+     WHERE id = ?`,
+    [params.detectedAt, params.run.id]
+  );
+
+  run(
+    `UPDATE openclaw_sessions
+     SET task_id = NULL, updated_at = ?
+     WHERE openclaw_session_id = ?`,
+    [params.detectedAt, params.run.openclaw_session_id]
+  );
+
+  const updatedTask = queryOne<Task>('SELECT * FROM tasks WHERE id = ?', [params.task.id]);
+  if (updatedTask) {
+    broadcast({
+      type: 'task_updated',
+      payload: updatedTask,
+    });
+  }
 }
 
 function activeBlockerExists(taskId: string, title: string): boolean {
@@ -142,6 +202,14 @@ function maybeCreateIncident(params: {
       last_runtime_signal_type: params.rule,
       updated_at: params.detectedAt,
     });
+
+    applyStallRecovery({
+      run: params.run,
+      task: params.task,
+      rule: params.rule,
+      detectedAt: params.detectedAt,
+      reason: params.description,
+    });
   });
 
   return {
@@ -202,6 +270,7 @@ export async function runExecutionWatchdog(params: {
     const runtimeSignalAge = minutesSince(runState.last_runtime_signal_at, nowMs);
 
     const ackTimeout = threshold('MC_EXECUTION_ACK_TIMEOUT_MINUTES', 5);
+    const ackExecStartTimeout = threshold('MC_EXECUTION_ACK_EXEC_START_TIMEOUT_MINUTES', 2);
     const progressTimeout = threshold('MC_EXECUTION_PROGRESS_TIMEOUT_MINUTES', 15);
     const noDeltaTimeout = threshold('MC_EXECUTION_NO_DELTA_TIMEOUT_MINUTES', 30);
     const completionTimeout = threshold('MC_EXECUTION_COMPLETION_INGESTION_TIMEOUT_MINUTES', 5);
@@ -213,6 +282,23 @@ export async function runExecutionWatchdog(params: {
         rule: 'dispatched_no_ack',
         title: 'Execution stalled after dispatch',
         description: `Dispatch run ${runState.id} has not acknowledged within ${ackTimeout} minute(s).`,
+        detectedAt: now,
+      }));
+      continue;
+    }
+
+    if (
+      runState.execution_state === 'acknowledged'
+      && !runState.execution_started_at
+      && ackAge !== null
+      && ackAge >= ackExecStartTimeout
+    ) {
+      incidents.push(maybeCreateIncident({
+        run: runState,
+        task,
+        rule: 'ack_missing_exec_started',
+        title: 'ACK received but EXEC_STARTED missing',
+        description: `Dispatch run ${runState.id} acknowledged work but did not emit EXEC_STARTED within ${ackExecStartTimeout} minute(s). First-turn execution contract violated.`,
         detectedAt: now,
       }));
       continue;

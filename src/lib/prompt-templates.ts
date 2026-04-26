@@ -36,6 +36,13 @@ function promptDelimiter(taskId: string, suffix: string): string {
   return `MC_${suffix}_${taskId.replace(/[^A-Za-z0-9_]/g, '_')}`;
 }
 
+type CodingExecutor = 'codex' | 'opencode';
+
+function resolveCodingExecutor(): CodingExecutor {
+  const raw = (process.env.MC_CODING_EXECUTOR || 'codex').trim().toLowerCase();
+  return raw === 'opencode' ? 'opencode' : 'codex';
+}
+
 export function buildDispatchPrompt(context: DispatchContext): string {
   const { task, agent, workspace, blockingTasks, dependentTasks, planningSpec, missionControlUrl, planningAgents } = context;
   const priorityEmoji = PRIORITY_EMOJI[task.priority] || '⚪';
@@ -147,107 +154,101 @@ export function buildDispatchPrompt(context: DispatchContext): string {
   parts.push('');
 
   const isCoding = isCodingTask(task.title, task.description || '');
+  const codingExecutor = resolveCodingExecutor();
+  const codexModel = (process.env.MC_CODEX_MODEL || 'gpt-5.4').trim();
+  const codexBinary = '/home/vlad-plk/.npm-global/bin/codex';
   const opencodeModel = (process.env.OPENCODE_CODING_MODEL || 'openai/gpt-5.3').trim();
   const opencodeFallbackModel = (process.env.OPENCODE_CODING_FALLBACK_MODEL || '').trim();
   const opencodeBinary = '/home/vlad-plk/.npm-global/bin/opencode';
-  const planningDelimiter = promptDelimiter(task.id, 'PLANNING_PROMPT');
-  const buildDelimiter = promptDelimiter(task.id, 'BUILD_PROMPT');
-  
+  const executorDelimiter = promptDelimiter(task.id, 'EXECUTOR_PROMPT');
+
   if (isCoding && codebaseDir) {
-    parts.push('**🤖 OPENCODE EXECUTION (MANDATORY FOR CODING TASKS):**');
+    parts.push(`**🤖 CODING EXECUTION (${codingExecutor.toUpperCase()} PREFERRED):**`);
+    parts.push(`This is a coding task. Execute via ${codingExecutor === 'codex' ? 'Codex CLI single-pass mode' : 'OpenCode CLI'} and then report back through ${APP_DISPLAY_NAME} task APIs.`);
+    parts.push('**Execution authorization:** You are pre-authorized to run shell/exec commands for coding execution and task API updates.');
     parts.push('');
-    parts.push('This is a CODING TASK. You MUST use OpenCode to execute it.');
-    parts.push(`**Primary model:** ${opencodeModel}`);
-    if (opencodeFallbackModel) {
-      parts.push(`**Fallback model:** ${opencodeFallbackModel}`);
-      parts.push('If primary model fails with quota/billing/entitlement error, retry once with the fallback model and continue.');
+
+    if (codingExecutor === 'codex') {
+      parts.push(`**Executor:** Codex CLI (${codexModel})`);
+      parts.push('Use single-pass Codex execution (no PLAN/BUILD split).');
+      parts.push('OpenClaw session reasoning target: high.');
+      parts.push('Pass the task directly to Codex with JSON output.');
+      parts.push('```bash');
+      parts.push(`cd ${quotedCodebaseDir} && ${codexBinary} exec --model ${codexModel} --json "$(cat <<'${executorDelimiter}'`);
+      parts.push(`Task ID: ${task.id}`);
+      parts.push(`Task: ${task.title}`);
+      if (task.description) {
+        parts.push(`Description: ${task.description}`);
+      }
+      if (planningSpec?.success_criteria?.length) {
+        parts.push('Success criteria:');
+        planningSpec.success_criteria.forEach((criterion) => parts.push(`- ${criterion}`));
+      }
+      if (planningSpec?.deliverables?.length) {
+        parts.push('Expected deliverables:');
+        planningSpec.deliverables.forEach((deliverable) => parts.push(`- ${deliverable}`));
+      }
+      parts.push('Requirements:');
+      parts.push('- Make only the required code/file updates in this repository.');
+      parts.push('- Prefer minimal, targeted changes.');
+      parts.push('- Do not start servers or long-running processes.');
+      parts.push('- Return concise summary of changed files and why.');
+      parts.push(executorDelimiter);
+      parts.push(')"');
+      parts.push('```');
+      parts.push('If execution fails, fix minimally and retry once.');
+    } else {
+      parts.push(`**Executor:** OpenCode CLI (${opencodeModel})`);
+      if (opencodeFallbackModel) {
+        parts.push(`Fallback model: ${opencodeFallbackModel}`);
+      }
+      parts.push('Before running OpenCode, run a mandatory preflight exec call as your first assistant event:');
+      parts.push('```bash');
+      parts.push(`cd ${quotedCodebaseDir} && pwd && echo EXEC_PREFLIGHT_OK`);
+      parts.push('```');
+      parts.push('If preflight fails, immediately report `BLOCKED:` with exact stderr and missing dependency.');
+      parts.push('```bash');
+      parts.push(`cd ${quotedCodebaseDir} && ${opencodeBinary} run -m ${opencodeModel} "$(cat <<'${executorDelimiter}'`);
+      parts.push(`Task: ${task.title}`);
+      if (task.description) {
+        parts.push(`Description: ${task.description}`);
+      }
+      if (planningSpec?.success_criteria?.length) {
+        parts.push('Success criteria:');
+        planningSpec.success_criteria.forEach((criterion) => parts.push(`- ${criterion}`));
+      }
+      parts.push('Requirements:');
+      parts.push('- Make the required code/file updates in the current repository.');
+      parts.push('- Prefer minimal, targeted changes.');
+      parts.push('- Do not start servers or long-running processes.');
+      parts.push('- Return concise summary of changed files and why.');
+      parts.push(executorDelimiter);
+      parts.push(')"');
+      parts.push('```');
+      if (opencodeFallbackModel) {
+        parts.push(`If ${opencodeModel} fails with quota/billing/entitlement error, retry once with ${opencodeFallbackModel}.`);
+      }
     }
-    parts.push(`**OpenCode Binary (absolute path):** ${opencodeBinary}`);
-    parts.push(`**Execution authorization:** You are explicitly authorized to run required shell/exec commands for this task (OpenCode + ${APP_DISPLAY_NAME} task API calls). Do NOT request an extra permission round-trip.`);
-    parts.push('');
-    parts.push('**Phase 1 - PLANNING (always start here):**');
-    parts.push('```bash');
-    parts.push(`cd ${quotedCodebaseDir} && ${opencodeBinary} run -m ${opencodeModel} "$(cat <<'${planningDelimiter}'`);
-    parts.push('Planning mode:');
-    parts.push(`Task: ${task.title}`);
-    if (task.description) {
-      parts.push(`Description: ${task.description}`);
-    }
-    if (planningSpec?.success_criteria?.length) {
-      parts.push('');
-      parts.push('Success Criteria:');
-      planningSpec.success_criteria.forEach(c => parts.push(`- ${c}`));
-    }
-    if (planningSpec?.deliverables?.length) {
-      parts.push('');
-      parts.push('Deliverables:');
-      planningSpec.deliverables.forEach(d => parts.push(`- ${d}`));
-    }
-    parts.push('');
-    parts.push('Provide a detailed step-by-step plan before writing any code.');
-    parts.push(planningDelimiter);
-    parts.push(')"');
-    parts.push('```');
-    parts.push('');
-    parts.push('**Phase 2 - BUILD (after planning):**');
-    parts.push('```bash');
-    parts.push(`cd ${quotedCodebaseDir} && ${opencodeBinary} run -m ${opencodeModel} "$(cat <<'${buildDelimiter}'`);
-    parts.push('Build mode:');
-    parts.push(`Task: ${task.title}`);
-    if (task.description) {
-      parts.push(`Description: ${task.description}`);
-    }
-    parts.push('');
-    parts.push('Work in the current directory. Make actual code changes. Do NOT run or test the code.');
-    parts.push(buildDelimiter);
-    parts.push(')"');
-    parts.push('```');
-    parts.push('');
-    parts.push('**🚫 STRICTLY PROHIBITED - NEVER DO THESE:**');
-    parts.push('❌ DO NOT run `npm run dev`, `npm start`, `npm run build` or any server');
-    parts.push('❌ DO NOT execute the code (no `node`, `python`, `cargo run`, etc.)');
-    parts.push('❌ DO NOT deploy or push to production');
-    parts.push('❌ DO NOT run test suites unless explicitly requested in the task');
-    parts.push('❌ DO NOT install packages or run `npm install`');
-    parts.push('❌ DO NOT start development servers or containers');
-    parts.push('');
-    parts.push('Your job is ONLY to write code, not to test or run it.');
-    parts.push('');
-    parts.push('**⚠️ IMPORTANT WARNINGS:**');
-    parts.push('⚠️ ALWAYS run planning phase first - do NOT skip to building');
-    parts.push('⚠️ Always `cd` into the target directory before running OpenCode');
-    parts.push('⚠️ Make actual file changes using write/edit tools');
-    parts.push('⚠️ NEVER test or run the code - only write it');
-    parts.push('');
-    parts.push('**ERROR HANDLING:**');
-    parts.push('If OpenCode fails:');
-    if (opencodeFallbackModel) {
-      parts.push(`- If the error is quota/billing/entitlement on ${opencodeModel}, retry once with ${opencodeFallbackModel}`);
-    }
-    parts.push('- Report FAILURE IMMEDIATELY to the orchestrator');
-    parts.push('- Do NOT attempt to do the work yourself as fallback');
-    parts.push('- OpenCode is the ONLY way to complete coding tasks');
-    parts.push('- Provide the exact error message in your report');
-    parts.push('');
-    parts.push('**CAPTURING RESULTS:**');
-    parts.push('After OpenCode completes:');
-    parts.push('1. Capture the final OpenCode output (summary of changes)');
-    parts.push('2. Log activity with the output summary');
-    parts.push('3. The actual code changes in the workspace are the real deliverables');
+
     parts.push('');
   } else if (isCoding && !codebaseDir) {
-    parts.push('**⚠️ CODING TASK WITHOUT WORKSPACE FOLDER:**');
-    parts.push('This is a coding task but no workspace folder is configured.');
-    parts.push('Please inform the orchestrator that a workspace folder is required.');
+    parts.push('**⚠️ BLOCKER — CODING TASK MISSING WORKSPACE FOLDER:**');
+    parts.push('This task cannot run safely until workspace.folder_path is configured to the real repository path.');
+    parts.push('Report blocker to orchestrator instead of executing in a synthetic directory.');
     parts.push('');
   }
 
   parts.push('**IMPORTANT - COMPLETION PROTOCOL:**');
   parts.push('After receiving this dispatch, you MUST follow this exact reporting sequence:');
   parts.push('');
-  parts.push('0. **Acknowledge immediately before doing substantive work:**');
-  parts.push('   Reply in chat with:');
-  parts.push('   `ACK_TASK: <brief restatement> | next: <first step>`');
+  parts.push('0. **First-turn execution contract (mandatory, strict):**');
+  parts.push('   - Your first assistant event MUST be a real tool call (prefer `exec`) that advances the task.');
+  parts.push('   - Do NOT output standalone ACK/progress text before that first tool call.');
+  parts.push('   - After a successful tool result, immediately emit exactly:');
+  parts.push('     `ACK_TASK: <brief restatement> | next: <first step>`');
+  parts.push('     `EXEC_STARTED: <exact command or action run>`');
+  parts.push('   - If you cannot execute any tool call immediately, emit: `BLOCKED: <exact reason> | need: <specific fix> | meanwhile: <fallback>`');
+  parts.push('   - Any `ACK_TASK`/`EXEC_STARTED` without a preceding successful tool result is invalid and treated as protocol violation.');
   parts.push('');
   parts.push('1. **Log activity:**');
   parts.push(`   POST ${missionControlUrl}/api/tasks/${task.id}/activities`);

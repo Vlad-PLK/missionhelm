@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Zap, Settings, ChevronLeft, LayoutGrid, Menu, Plus, X } from 'lucide-react';
+import { Command, LayoutGrid, Menu, Plus, Settings, ChevronLeft, X, Zap } from 'lucide-react';
 import { useMissionControl } from '@/lib/store';
 import { format } from 'date-fns';
 import type { Workspace } from '@/lib/types';
 import { APP_DISPLAY_NAME } from '@/lib/branding';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { recordRecentWorkspaceVisit } from '@/lib/ui/operator-prefs';
 
 interface HeaderProps {
   workspace?: Workspace;
@@ -29,6 +31,14 @@ export function Header({ workspace, statsOverride, onCreateTask }: HeaderProps) 
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (!workspace?.slug) {
+      return;
+    }
+
+    recordRecentWorkspaceVisit(workspace.slug);
+  }, [workspace?.slug]);
 
   // Load active sub-agent count
   useEffect(() => {
@@ -55,22 +65,29 @@ export function Header({ workspace, statsOverride, onCreateTask }: HeaderProps) 
   const activeAgents = statsOverride?.activeAgents ?? (workingAgents + activeSubAgents);
   const tasksInQueue = statsOverride?.tasksInQueue ?? tasks.filter((t) => t.status !== 'done' && t.status !== 'review').length;
 
+  useKeyboardShortcuts({
+    onNew: workspace && onCreateTask ? onCreateTask : undefined,
+    onGoOperations: () => router.push('/operations'),
+    onGoSystem: () => router.push('/admin/system'),
+  });
+
   return (
-    <header className="h-14 bg-mc-bg-secondary border-b border-mc-border flex items-center justify-between px-4 lg:px-6">
+    <header className="border-b border-mc-border bg-mc-bg-secondary/95 px-4 py-3 backdrop-blur-xl lg:px-6">
       {/* Left: Logo & Title */}
+      <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2 lg:gap-4">
         {/* Mobile hamburger menu */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="lg:hidden p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-mc-bg-tertiary rounded"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-2xl border border-mc-border bg-mc-bg lg:hidden"
           aria-label="Toggle menu"
         >
           {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
 
-        <div className="flex items-center gap-2">
-          <Zap className="w-5 h-5 text-mc-accent-cyan" />
-          <span className="font-semibold text-mc-text uppercase tracking-wider text-sm hidden sm:block">
+        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-mc-bg px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+          <Zap className="w-4 h-4 text-mc-accent" />
+          <span className="hidden text-sm font-semibold uppercase tracking-[0.18em] text-mc-text sm:block">
             {APP_DISPLAY_NAME}
           </span>
         </div>
@@ -96,7 +113,7 @@ export function Header({ workspace, statsOverride, onCreateTask }: HeaderProps) 
         ) : (
           <Link
             href="/"
-            className="flex items-center gap-2 px-2 lg:px-3 py-1 bg-mc-bg-tertiary rounded hover:bg-mc-bg transition-colors"
+            className="flex items-center gap-2 rounded-full border border-mc-border bg-mc-bg px-3 py-2 transition-colors hover:border-mc-accent/30"
           >
             <LayoutGrid className="w-4 h-4" />
             <span className="text-sm hidden sm:inline">All Workspaces</span>
@@ -106,14 +123,14 @@ export function Header({ workspace, statsOverride, onCreateTask }: HeaderProps) 
 
       {/* Center: Stats - only show in workspace view on larger screens */}
       {workspace && (
-        <div className="hidden md:flex items-center gap-8">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-mc-accent-cyan">{activeAgents}</div>
-            <div className="text-xs text-mc-text-secondary uppercase">Agents Active</div>
+        <div className="hidden md:flex items-center gap-3">
+          <div className="rounded-[1.2rem] border border-mc-border bg-mc-bg px-4 py-2.5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+            <div className="text-[11px] uppercase tracking-[0.18em] text-mc-text-secondary">Agents Active</div>
+            <div className="mt-1 text-2xl font-semibold tracking-tight text-mc-accent">{activeAgents}</div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-mc-accent-purple">{tasksInQueue}</div>
-            <div className="text-xs text-mc-text-secondary uppercase">Tasks in Queue</div>
+          <div className="rounded-[1.2rem] border border-mc-border bg-mc-bg px-4 py-2.5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+            <div className="text-[11px] uppercase tracking-[0.18em] text-mc-text-secondary">Tasks in Queue</div>
+            <div className="mt-1 text-2xl font-semibold tracking-tight text-mc-accent-yellow">{tasksInQueue}</div>
           </div>
         </div>
       )}
@@ -123,18 +140,18 @@ export function Header({ workspace, statsOverride, onCreateTask }: HeaderProps) 
         {workspace && onCreateTask && (
           <button
             onClick={onCreateTask}
-            className="inline-flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-lg bg-mc-accent-pink text-mc-bg font-medium hover:bg-mc-accent-pink/90"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-mc-accent px-4 py-2 text-sm font-medium text-mc-bg transition-colors hover:bg-mc-accent/90"
             title="Create task"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden md:inline">New Task</span>
           </button>
         )}
-        <span className="text-mc-text-secondary text-sm font-mono hidden sm:inline">
+        <span className="hidden text-sm font-mono text-mc-text-secondary sm:inline">
           {format(currentTime, 'HH:mm:ss')}
         </span>
         <div
-          className={`flex items-center gap-2 px-2 lg:px-3 py-1 rounded border text-xs lg:text-sm font-medium ${
+          className={`flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium lg:text-sm ${
             isOnline
               ? 'bg-mc-accent-green/20 border-mc-accent-green text-mc-accent-green'
               : 'bg-mc-accent-red/20 border-mc-accent-red text-mc-accent-red'
@@ -149,42 +166,47 @@ export function Header({ workspace, statsOverride, onCreateTask }: HeaderProps) 
         </div>
         <button
           onClick={() => router.push('/operations')}
-          className="hidden md:flex p-2 min-h-[44px] min-w-[44px] hover:bg-mc-bg-tertiary rounded text-mc-text-secondary items-center justify-center"
+          className="hidden min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-mc-border bg-mc-bg text-mc-text-secondary transition-colors hover:border-mc-accent/30 md:flex"
           title="Operations"
         >
-          <LayoutGrid className="w-5 h-5" />
+          <Command className="w-4 h-4" />
         </button>
         <button
           onClick={() => router.push('/settings')}
-          className="p-2 min-h-[44px] min-w-[44px] hover:bg-mc-bg-tertiary rounded text-mc-text-secondary flex items-center justify-center"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-mc-border bg-mc-bg text-mc-text-secondary transition-colors hover:border-mc-accent/30"
           title="Settings"
         >
           <Settings className="w-5 h-5" />
         </button>
       </div>
+      </div>
 
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 top-14 bg-mc-bg/95 z-40 lg:hidden" onClick={() => setMobileMenuOpen(false)}>
+        <div className="fixed inset-0 top-[73px] z-40 bg-mc-bg/95 lg:hidden" onClick={() => setMobileMenuOpen(false)}>
           <div className="p-4 space-y-4" onClick={e => e.stopPropagation()}>
             {/* Mobile Stats */}
             {workspace && (
-              <div className="flex justify-around py-4 border-b border-mc-border">
-                <div className="text-center">
-                  <div className="text-xl font-bold text-mc-accent-cyan">{activeAgents}</div>
-                  <div className="text-xs text-mc-text-secondary uppercase">Agents</div>
+              <div className="grid grid-cols-2 gap-3 border-b border-mc-border pb-4">
+                <div className="rounded-[1.2rem] border border-mc-border bg-mc-bg px-4 py-3 text-center">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-mc-text-secondary">Agents</div>
+                  <div className="mt-1 text-xl font-semibold text-mc-accent">{activeAgents}</div>
                 </div>
-                <div className="text-center">
-                  <div className="text-xl font-bold text-mc-accent-purple">{tasksInQueue}</div>
-                  <div className="text-xs text-mc-text-secondary uppercase">Queue</div>
+                <div className="rounded-[1.2rem] border border-mc-border bg-mc-bg px-4 py-3 text-center">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-mc-text-secondary">Queue</div>
+                  <div className="mt-1 text-xl font-semibold text-mc-accent-yellow">{tasksInQueue}</div>
                 </div>
               </div>
             )}
             
+            <div className="rounded-[1.2rem] border border-mc-border bg-mc-bg px-4 py-3 text-xs text-mc-text-secondary">
+              Shortcuts: <span className="font-mono text-mc-text">g o</span> operations · <span className="font-mono text-mc-text">n</span> new task
+            </div>
+            
             {/* Quick Links */}
             <Link
               href={`/workspace/${workspace?.slug || ''}`}
-              className="flex items-center gap-3 p-3 min-h-[44px] bg-mc-bg-secondary rounded-lg"
+              className="flex min-h-[44px] items-center gap-3 rounded-[1.2rem] border border-mc-border bg-mc-bg-secondary px-4 py-3"
               onClick={() => setMobileMenuOpen(false)}
             >
               <LayoutGrid className="w-5 h-5" />
@@ -196,7 +218,7 @@ export function Header({ workspace, statsOverride, onCreateTask }: HeaderProps) 
                   setMobileMenuOpen(false);
                   onCreateTask();
                 }}
-                className="w-full flex items-center gap-3 p-3 min-h-[44px] bg-mc-accent-pink text-mc-bg rounded-lg"
+                className="flex w-full min-h-[44px] items-center gap-3 rounded-[1.2rem] bg-mc-accent px-4 py-3 text-mc-bg"
               >
                 <Plus className="w-5 h-5" />
                 <span>New Task</span>
@@ -204,7 +226,7 @@ export function Header({ workspace, statsOverride, onCreateTask }: HeaderProps) 
             )}
             <Link
               href="/"
-              className="flex items-center gap-3 p-3 min-h-[44px] bg-mc-bg-secondary rounded-lg"
+              className="flex min-h-[44px] items-center gap-3 rounded-[1.2rem] border border-mc-border bg-mc-bg-secondary px-4 py-3"
               onClick={() => setMobileMenuOpen(false)}
             >
               <LayoutGrid className="w-5 h-5" />
@@ -212,15 +234,15 @@ export function Header({ workspace, statsOverride, onCreateTask }: HeaderProps) 
             </Link>
             <Link
               href="/operations"
-              className="flex items-center gap-3 p-3 min-h-[44px] bg-mc-bg-secondary rounded-lg"
+              className="flex min-h-[44px] items-center gap-3 rounded-[1.2rem] border border-mc-border bg-mc-bg-secondary px-4 py-3"
               onClick={() => setMobileMenuOpen(false)}
             >
-              <LayoutGrid className="w-5 h-5" />
+              <Command className="w-5 h-5" />
               <span>Operations</span>
             </Link>
             <Link
               href="/settings"
-              className="flex items-center gap-3 p-3 min-h-[44px] bg-mc-bg-secondary rounded-lg"
+              className="flex min-h-[44px] items-center gap-3 rounded-[1.2rem] border border-mc-border bg-mc-bg-secondary px-4 py-3"
               onClick={() => setMobileMenuOpen(false)}
             >
               <Settings className="w-5 h-5" />

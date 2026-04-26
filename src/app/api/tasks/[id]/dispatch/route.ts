@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { queryOne, queryAll, run, transaction } from '@/lib/db';
 import { broadcast } from '@/lib/events';
 import { buildDispatchPrompt, fetchDispatchContext } from '@/lib/prompt-templates';
+import { isCodingTask } from '@/lib/opencode';
 import type { Task, Agent, OpenClawSession } from '@/lib/types';
 import { APP_RUNTIME_CHANNEL, APP_RUNTIME_SESSION_PREFIX } from '@/lib/branding';
 import {
@@ -160,6 +161,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(
         { error: 'Failed to fetch dispatch context' },
         { status: 500 }
+      );
+    }
+
+    const codingTask = isCodingTask(task.title, task.description || '');
+    if (codingTask && !context.workspace?.folder_path) {
+      return NextResponse.json(
+        {
+          error: 'Workspace folder path required for coding task dispatch',
+          message: `Task ${task.id} is coding-like and cannot be dispatched until workspace.folder_path points to the real repository path.`,
+          workspace_id: context.task.workspace_id,
+        },
+        { status: 409 }
       );
     }
 

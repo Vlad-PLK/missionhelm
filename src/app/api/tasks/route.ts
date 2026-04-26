@@ -4,10 +4,62 @@ import { queryAll, queryOne, run } from '@/lib/db';
 import { broadcast } from '@/lib/events';
 import { CreateTaskSchema } from '@/lib/validation';
 import type { Task, CreateTaskRequest, Agent } from '@/lib/types';
+import { isCodingTask } from '@/lib/opencode';
 
 // GET /api/tasks - List all tasks with optional filters
 
 export const dynamic = 'force-dynamic';
+
+function shouldDefaultToCodeLead(task: {
+  assigned_agent_id?: string | null;
+  title: string;
+  description?: string | null;
+  task_type?: string | null;
+}): boolean {
+  if (task.assigned_agent_id) {
+    return false;
+  }
+
+  const title = task.title || '';
+  const description = task.description || '';
+  const codingLikeType = new Set(['feature', 'bugfix', 'deployment']);
+
+  return Boolean(
+    codingLikeType.has((task.task_type || '').toLowerCase()) ||
+    isCodingTask(title, description)
+  );
+}
+
+function findPreferredCodeLead(workspaceId: string): Agent | null {
+  const workspaceScoped = queryOne<Agent>(
+    `SELECT * FROM agents
+     WHERE workspace_id = ?
+       AND status != 'offline'
+       AND (
+         LOWER(name) = 'code-lead'
+         OR LOWER(gateway_agent_id) = 'code-lead'
+       )
+     ORDER BY CASE WHEN status = 'standby' THEN 0 ELSE 1 END, updated_at DESC
+     LIMIT 1`,
+    [workspaceId]
+  );
+
+  if (workspaceScoped) {
+    return workspaceScoped;
+  }
+
+  return queryOne<Agent>(
+    `SELECT * FROM agents
+     WHERE status != 'offline'
+       AND (
+         LOWER(name) = 'code-lead'
+         OR LOWER(gateway_agent_id) = 'code-lead'
+       )
+     ORDER BY CASE WHEN status = 'standby' THEN 0 ELSE 1 END, updated_at DESC
+     LIMIT 1`
+  ) || null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -98,7 +150,13 @@ export async function POST(request: NextRequest) {
 
     const workspaceId = validatedData.workspace_id || 'default';
     const status = validatedData.status || 'inbox';
-    
+
+    const shouldAutoAssignCodeLead = shouldDefaultToCodeLead(validatedData);
+    const autoSelectedCodeLead = shouldAutoAssignCodeLead
+      ? findPreferredCodeLead(workspaceId)
+      : null;
+    const assignedAgentId = validatedData.assigned_agent_id || autoSelectedCodeLead?.id || null;
+
     run(
       `INSERT INTO tasks (id, title, description, task_type, status, priority, estimated_hours, actual_hours, assigned_agent_id, created_by_agent_id, workspace_id, business_id, due_date, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -111,7 +169,7 @@ export async function POST(request: NextRequest) {
         validatedData.priority || 'normal',
         validatedData.estimated_hours ?? null,
         validatedData.actual_hours ?? null,
-        validatedData.assigned_agent_id || null,
+        assignedAgentId,
         validatedData.created_by_agent_id || null,
         workspaceId,
         validatedData.business_id || 'default',

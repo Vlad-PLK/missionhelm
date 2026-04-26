@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryAll, queryOne, run } from '@/lib/db';
+import { isCodingTask } from '@/lib/opencode';
 import type { Agent, Task } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -25,6 +26,14 @@ function scoreAgents(task: Task, agents: Agent[]): ScoredAgent[] {
     const taskType = task.task_type || 'general';
     const role = (agent.role || '').toLowerCase();
     const description = (agent.description || '').toLowerCase();
+    const codingLikeTask =
+      ['feature', 'bugfix', 'deployment'].includes(taskType.toLowerCase()) ||
+      isCodingTask(task.title, task.description || '');
+
+    if (codingLikeTask && agent.name.toLowerCase() === 'code-lead') {
+      score += 40;
+      reasons.push('code-lead prioritized for coding-like task');
+    }
 
     switch (taskType) {
       case 'bugfix':

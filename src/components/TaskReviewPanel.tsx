@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { CheckCircle2, Loader2, PlayCircle, RotateCcw, Send } from 'lucide-react';
+import { CheckCircle2, Loader2, PlayCircle, RotateCcw, Send, ShieldAlert, TestTube2 } from 'lucide-react';
 import type { Task, TaskActivity, TaskDeliverable, TaskStatus } from '@/lib/types';
 
 interface TaskReviewPanelProps {
@@ -37,7 +37,7 @@ export function TaskReviewPanel({ task, onTaskUpdated }: TaskReviewPanelProps) {
   }, [task.id]);
 
   useEffect(() => {
-    loadContext();
+    void loadContext();
   }, [loadContext]);
 
   const latestTestActivity = useMemo(() => {
@@ -115,59 +115,82 @@ export function TaskReviewPanel({ task, onTaskUpdated }: TaskReviewPanelProps) {
   };
 
   return (
-    <div className="rounded-xl border border-mc-border bg-mc-bg-secondary p-4 space-y-4">
-      <div className="flex items-center justify-between gap-3">
+    <div className="rounded-[1.6rem] border border-mc-border bg-mc-bg-secondary/88 p-5 shadow-[0_18px_40px_-36px_rgba(0,0,0,0.75)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(260px,0.9fr)]">
         <div>
-          <div className="text-sm font-medium">Review / Approval</div>
-          <div className="text-xs text-mc-text-secondary mt-1">
-            Keep testing, approval, and send-back actions visible without returning to the board.
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-mc-bg px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-mc-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+            <TestTube2 className="h-3.5 w-3.5 text-mc-accent" />
+            Review / Approval
+          </div>
+          <h3 className="text-xl font-semibold tracking-tight text-mc-text">Keep approval visible</h3>
+          <p className="mt-2 text-sm leading-relaxed text-mc-text-secondary">
+            Keep testing state, deliverables, and send-back actions on the same surface instead of bouncing back to the board.
+          </p>
+        </div>
+
+        <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(135deg,rgba(88,166,255,0.12),rgba(13,17,23,0.18))] p-4 shadow-[0_18px_40px_-36px_rgba(0,0,0,0.78)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+          <div className="text-[11px] uppercase tracking-[0.18em] text-mc-text-secondary">Current status</div>
+          <div className="mt-2 text-2xl font-semibold tracking-tight text-mc-text">{task.status.replace(/_/g, ' ')}</div>
+          <div className="mt-2 text-sm text-mc-text-secondary">
+            {task.status === 'review'
+              ? 'Operator approval is the next blocking action.'
+              : task.status === 'testing'
+                ? 'Run tests or inspect receipts before approval.'
+                : 'Advance this task into the next review step when evidence is ready.'}
           </div>
         </div>
-        <span className="text-xs px-2 py-1 rounded-full border border-mc-border bg-mc-bg text-mc-text-secondary uppercase">
-          {task.status.replace('_', ' ')}
-        </span>
       </div>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-mc-text-secondary">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          Loading testing context...
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="h-24 animate-pulse rounded-[1.25rem] border border-mc-border bg-mc-bg" />
+          ))}
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <Stat label="Deliverables" value={String(deliverables.length)} />
             <Stat label="Activities" value={String(activities.length)} />
             <Stat label="Latest Test" value={latestTestActivity ? latestTestActivity.activity_type.replace('_', ' ') : 'Not run'} />
           </div>
 
           {latestTestActivity ? (
-            <div className={`rounded-lg border px-3 py-3 ${latestTestActivity.activity_type === 'test_passed' ? 'border-mc-accent-green/30 bg-mc-accent-green/10' : 'border-mc-accent-red/30 bg-mc-accent-red/10'}`}>
-              <div className="font-medium text-sm">
+            <div
+              className={`mt-4 rounded-[1.25rem] border px-4 py-4 ${
+                latestTestActivity.activity_type === 'test_passed'
+                  ? 'border-mc-accent-green/30 bg-mc-accent-green/10'
+                  : 'border-mc-accent-red/30 bg-mc-accent-red/10'
+              }`}
+            >
+              <div className="text-sm font-medium text-mc-text">
                 {latestTestActivity.activity_type === 'test_passed' ? 'Latest automated test passed' : 'Latest automated test failed'}
               </div>
-              <div className="text-xs text-mc-text-secondary mt-1">{latestTestActivity.message}</div>
+              <div className="mt-1 text-xs text-mc-text-secondary">{latestTestActivity.message}</div>
             </div>
           ) : (
-            <div className="rounded-lg border border-mc-border bg-mc-bg px-3 py-3 text-sm text-mc-text-secondary">
+            <div className="mt-4 rounded-[1.25rem] border border-mc-border bg-mc-bg px-4 py-4 text-sm text-mc-text-secondary">
               No automated test results recorded yet for this task.
             </div>
           )}
 
-          {task.planning_dispatch_error && (
-            <div className="rounded-lg border border-mc-accent-red/30 bg-mc-accent-red/10 px-3 py-3 text-sm text-mc-text">
-              <div className="font-medium">Dispatch warning</div>
-              <div className="text-xs text-mc-text-secondary mt-1">{task.planning_dispatch_error}</div>
+          {task.planning_dispatch_error ? (
+            <div className="mt-4 flex items-start gap-3 rounded-[1.25rem] border border-mc-accent-red/30 bg-mc-accent-red/10 px-4 py-4">
+              <ShieldAlert className="mt-0.5 h-4 w-4 text-mc-accent-red" />
+              <div>
+                <div className="text-sm font-medium text-mc-text">Dispatch warning</div>
+                <div className="mt-1 text-xs text-mc-text-secondary">{task.planning_dispatch_error}</div>
+              </div>
             </div>
-          )}
+          ) : null}
 
-          {actionError && (
-            <div className="rounded-lg border border-mc-accent-red/30 bg-mc-accent-red/10 px-3 py-3 text-sm text-mc-text-secondary">
+          {actionError ? (
+            <div className="mt-4 rounded-[1.25rem] border border-mc-accent-red/30 bg-mc-accent-red/10 px-4 py-4 text-sm text-mc-text-secondary">
               {actionError}
             </div>
-          )}
+          ) : null}
 
-          <div className="flex flex-wrap gap-2">
+          <div className="mt-5 flex flex-wrap gap-2">
             <ActionButton
               label="Run Automated Test"
               icon={<PlayCircle className="w-4 h-4" />}
@@ -206,9 +229,9 @@ export function TaskReviewPanel({ task, onTaskUpdated }: TaskReviewPanelProps) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-mc-border bg-mc-bg px-3 py-3">
-      <div className="text-[11px] uppercase tracking-wider text-mc-text-secondary">{label}</div>
-      <div className="text-lg font-semibold mt-1">{value}</div>
+    <div className="rounded-[1.25rem] border border-mc-border bg-mc-bg px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="text-[11px] uppercase tracking-[0.18em] text-mc-text-secondary">{label}</div>
+      <div className="mt-2 text-xl font-semibold tracking-tight text-mc-text">{value}</div>
     </div>
   );
 }
@@ -232,7 +255,7 @@ function ActionButton({
     <button
       onClick={onClick}
       disabled={disabled || loading}
-      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border text-sm disabled:opacity-50 ${
+      className={`inline-flex min-h-[44px] items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50 ${
         tone === 'success'
           ? 'border-mc-accent-green/30 bg-mc-accent-green/10 text-mc-accent-green'
           : 'border-mc-border bg-mc-bg text-mc-text hover:border-mc-accent/40'
