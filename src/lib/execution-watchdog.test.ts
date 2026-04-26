@@ -54,10 +54,10 @@ test('execution watchdog records a stalled dispatch when no ack arrives within t
     assert.equal(incidents[0].rule, 'dispatched_no_ack');
 
     const updatedRun = db.prepare('SELECT execution_state FROM task_dispatch_runs WHERE id = ?').get('run-1') as { execution_state: string };
-    assert.equal(updatedRun.execution_state, 'stalled');
+    assert.equal(updatedRun.execution_state, 'dispatched');
 
-    const blocker = db.prepare('SELECT title FROM task_blockers WHERE task_id = ?').get('task-1') as { title: string };
-    assert.equal(blocker.title, 'Execution stalled after dispatch');
+    const blockerCount = db.prepare('SELECT COUNT(*) as count FROM task_blockers WHERE task_id = ?').get('task-1') as { count: number };
+    assert.equal(blockerCount.count, 0);
 
     const activity = db.prepare(
       `SELECT * FROM task_activities
@@ -68,6 +68,7 @@ test('execution watchdog records a stalled dispatch when no ack arrives within t
     ).get('task-1') as any;
     assert.ok(activity);
     assert.match(String(activity.metadata), /stalled_execution_detected/);
+    assert.match(String(activity.metadata), /"watchdog_mode":"monitor_only"/);
   } finally {
     closeDb();
     if (previousDbPath === undefined) {
@@ -145,8 +146,17 @@ test('execution watchdog flags recent runtime signals that do not have matching 
     assert.ok(incident);
     assert.equal(incident.rule, 'runtime_signal_without_receipt');
 
-    const blocker = db.prepare('SELECT title FROM task_blockers WHERE task_id = ? ORDER BY created_at DESC LIMIT 1').get('task-2') as { title: string };
-    assert.equal(blocker.title, 'Runtime updated without visible task evidence');
+    const blockerCount = db.prepare('SELECT COUNT(*) as count FROM task_blockers WHERE task_id = ?').get('task-2') as { count: number };
+    assert.equal(blockerCount.count, 0);
+
+    const activity = db.prepare(
+      `SELECT metadata FROM task_activities
+       WHERE task_id = ?
+         AND activity_type = 'staleness_detected'
+       ORDER BY created_at DESC
+       LIMIT 1`
+    ).get('task-2') as { metadata: string };
+    assert.match(activity.metadata, /"watchdog_mode":"monitor_only"/);
   } finally {
     closeDb();
     if (previousDbPath === undefined) {
@@ -210,7 +220,7 @@ test('execution watchdog does not duplicate blockers for the same stalled condit
        FROM task_blockers
        WHERE task_id = ?`
     ).get('task-3') as { count: number };
-    assert.equal(blockerCount.count, 1);
+    assert.equal(blockerCount.count, 0);
 
     const activityCount = db.prepare(
       `SELECT COUNT(*) AS count

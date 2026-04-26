@@ -165,6 +165,7 @@ const TABLE_INVARIANTS: InvariantTable[] = [
       CREATE TABLE IF NOT EXISTS openclaw_sessions (
         id TEXT PRIMARY KEY,
         agent_id TEXT REFERENCES agents(id),
+        workspace_id TEXT REFERENCES workspaces(id),
         openclaw_session_id TEXT NOT NULL,
         channel TEXT,
         status TEXT DEFAULT 'active',

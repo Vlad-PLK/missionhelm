@@ -469,6 +469,23 @@ const migrations: Migration[] = [
 
       console.log('[Migration 016] Created task_dispatch_runs table');
     }
+  },
+  {
+    id: '017',
+    name: 'add_openclaw_sessions_workspace_scope',
+    up: (db) => {
+      console.log('[Migration 017] Adding workspace scope to openclaw_sessions...');
+
+      const sessionsInfo = db.prepare("PRAGMA table_info(openclaw_sessions)").all() as { name: string }[];
+
+      if (!sessionsInfo.some(col => col.name === 'workspace_id')) {
+        db.exec(`ALTER TABLE openclaw_sessions ADD COLUMN workspace_id TEXT REFERENCES workspaces(id)`);
+        console.log('[Migration 017] Added workspace_id to openclaw_sessions');
+      }
+
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_openclaw_sessions_workspace_agent_status ON openclaw_sessions(workspace_id, agent_id, status, session_type)`);
+      console.log('[Migration 017] Ensured workspace/agent/status index on openclaw_sessions');
+    }
   }
 ];
 

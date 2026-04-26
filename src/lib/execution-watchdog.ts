@@ -53,9 +53,24 @@ function threshold(envName: string, fallback: number): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+function parseBoolean(raw: string | undefined, fallback: boolean): boolean {
+  if (raw === undefined || raw.trim() === '') {
+    return fallback;
+  }
+
+  return ['1', 'true', 'yes', 'on'].includes(raw.trim().toLowerCase());
+}
+
+function isWatchdogMutationsEnabled(): boolean {
+  return parseBoolean(process.env.MC_EXECUTION_WATCHDOG_MUTATIONS, false);
+}
+
 function isStallAutoRecoveryEnabled(): boolean {
-  const raw = (process.env.MC_EXECUTION_STALL_AUTO_RECOVERY ?? 'true').trim().toLowerCase();
-  return !['0', 'false', 'no', 'off'].includes(raw);
+  if (isWatchdogMutationsEnabled()) {
+    return parseBoolean(process.env.MC_EXECUTION_STALL_AUTO_RECOVERY, true);
+  }
+
+  return false;
 }
 
 function stallRecoveryStatus(): 'planning' | 'inbox' {
@@ -167,6 +182,7 @@ function maybeCreateIncident(params: {
 }): ExecutionWatchdogIncident {
   const severity = params.rule === 'in_progress_no_delta' ? 'medium' : 'high';
   const sourceFingerprint = `watchdog:${params.rule}:${params.run.id}`;
+  const mutationsEnabled = isWatchdogMutationsEnabled();
 
   transaction(() => {
     recordExecutionReceipt({
@@ -184,31 +200,47 @@ function maybeCreateIncident(params: {
       metadata: {
         watchdog_rule: params.rule,
         description: params.description,
+        watchdog_mode: mutationsEnabled ? 'mutating' : 'monitor_only',
       },
     });
 
-    createExecutionBlocker({
-      taskId: params.task.id,
-      agentId: params.run.agent_id,
-      title: params.title,
-      description: params.description,
-      severity,
-      detectedAt: params.detectedAt,
-    });
+    if (mutationsEnabled) {
+      createExecutionBlocker({
+        taskId: params.task.id,
+        agentId: params.run.agent_id,
+        title: params.title,
+        description: params.description,
+        severity,
+        detectedAt: params.detectedAt,
+      });
+
+      updateExecutionRun(params.run.id, {
+        execution_state: params.rule === 'completion_not_ingested' ? 'ingestion_failed' : 'stalled',
+        last_runtime_signal_at: params.detectedAt,
+        last_runtime_signal_type: params.rule,
+        updated_at: params.detectedAt,
+      });
+
+      applyStallRecovery({
+        run: params.run,
+        task: params.task,
+        rule: params.rule,
+        detectedAt: params.detectedAt,
+        reason: params.description,
+      });
+      return;
+    }
 
     updateExecutionRun(params.run.id, {
-      execution_state: params.rule === 'completion_not_ingested' ? 'ingestion_failed' : 'stalled',
       last_runtime_signal_at: params.detectedAt,
       last_runtime_signal_type: params.rule,
       updated_at: params.detectedAt,
-    });
-
-    applyStallRecovery({
-      run: params.run,
-      task: params.task,
-      rule: params.rule,
-      detectedAt: params.detectedAt,
-      reason: params.description,
+      source_summary: `${params.title} (watchdog monitor-only)`,
+      source_metadata: JSON.stringify({
+        watchdog_rule: params.rule,
+        description: params.description,
+        watchdog_mode: 'monitor_only',
+      }),
     });
   });
 

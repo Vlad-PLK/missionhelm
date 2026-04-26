@@ -103,10 +103,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Get or create OpenClaw session for this agent
+    // Get or create persistent OpenClaw session scoped to (workspace, agent)
     let session = queryOne<OpenClawSession>(
-      'SELECT * FROM openclaw_sessions WHERE agent_id = ? AND status = ?',
-      [agent.id, 'active']
+      `SELECT *
+       FROM openclaw_sessions
+       WHERE agent_id = ?
+         AND workspace_id = ?
+         AND session_type = 'persistent'
+         AND status = ?
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [agent.id, task.workspace_id, 'active']
     );
 
     const now = new Date().toISOString();
@@ -114,12 +121,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (!session) {
       // Create session record
       const sessionId = uuidv4();
-      const openclawSessionId = `${APP_RUNTIME_SESSION_PREFIX}-${agent.id}`;
-      
+      const workspaceSessionSuffix = task.workspace_id.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const openclawSessionId = `${APP_RUNTIME_SESSION_PREFIX}-${workspaceSessionSuffix}-${agent.id}`;
+
       run(
-        `INSERT INTO openclaw_sessions (id, agent_id, openclaw_session_id, channel, status, task_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [sessionId, agent.id, openclawSessionId, APP_RUNTIME_CHANNEL, 'active', null, now, now]
+        `INSERT INTO openclaw_sessions (id, agent_id, workspace_id, openclaw_session_id, channel, status, session_type, task_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [sessionId, agent.id, task.workspace_id, openclawSessionId, APP_RUNTIME_CHANNEL, 'active', 'persistent', null, now, now]
       );
 
       session = queryOne<OpenClawSession>(
@@ -129,9 +137,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
       // Log session creation
       run(
-        `INSERT INTO events (id, type, agent_id, message, created_at)
-         VALUES (?, ?, ?, ?, ?)`,
-        [uuidv4(), 'agent_status_changed', agent.id, `${agent.name} session created`, now]
+        `INSERT INTO events (id, type, agent_id, task_id, message, metadata, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          uuidv4(),
+          'agent_status_changed',
+          agent.id,
+          task.id,
+          `${agent.name} workspace-scoped session created`,
+          JSON.stringify({
+            session_id: openclawSessionId,
+            workspace_id: task.workspace_id,
+            session_scope: 'workspace+agent',
+          }),
+          now,
+        ]
       );
     }
 

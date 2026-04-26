@@ -169,6 +169,7 @@ export interface WorkspaceStats {
 export interface OpenClawSession {
   id: string;
   agent_id: string;
+  workspace_id?: string | null;
   openclaw_session_id: string;
   channel?: string;
   status: string;

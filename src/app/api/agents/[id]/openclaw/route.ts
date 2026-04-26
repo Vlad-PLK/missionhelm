@@ -20,10 +20,29 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
 
-    const session = queryOne<OpenClawSession>(
-      'SELECT * FROM openclaw_sessions WHERE agent_id = ? AND status = ?',
-      [id, 'active']
-    );
+    const workspaceId = request.nextUrl.searchParams.get('workspace_id');
+    const session = workspaceId
+      ? queryOne<OpenClawSession>(
+          `SELECT *
+           FROM openclaw_sessions
+           WHERE agent_id = ?
+             AND workspace_id = ?
+             AND session_type = 'persistent'
+             AND status = ?
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [id, workspaceId, 'active']
+        )
+      : queryOne<OpenClawSession>(
+          `SELECT *
+           FROM openclaw_sessions
+           WHERE agent_id = ?
+             AND session_type = 'persistent'
+             AND status = ?
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [id, 'active']
+        );
 
     if (!session) {
       return NextResponse.json({ linked: false, session: null });
@@ -49,10 +68,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
 
-    // Check if already linked
+    const body = await request.json().catch(() => ({})) as { workspace_id?: string };
+    const targetWorkspaceId = (body.workspace_id || agent.workspace_id || 'default').trim();
+
+    // Check if already linked for this workspace
     const existingSession = queryOne<OpenClawSession>(
-      'SELECT * FROM openclaw_sessions WHERE agent_id = ? AND status = ?',
-      [id, 'active']
+      `SELECT *
+       FROM openclaw_sessions
+       WHERE agent_id = ?
+         AND workspace_id = ?
+         AND session_type = 'persistent'
+         AND status = ?
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [id, targetWorkspaceId, 'active']
     );
     if (existingSession) {
       return NextResponse.json(
@@ -89,13 +118,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Store the link in our database - session ID will be set when first message is sent
     // For now, use agent name as the session identifier
     const sessionId = uuidv4();
-    const openclawSessionId = `${APP_RUNTIME_SESSION_PREFIX}-${agent.name.toLowerCase().replace(/\s+/g, '-')}`;
+    const workspaceSessionSuffix = targetWorkspaceId.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const openclawSessionId = `${APP_RUNTIME_SESSION_PREFIX}-${workspaceSessionSuffix}-${agent.id}`;
     const now = new Date().toISOString();
 
     run(
-      `INSERT INTO openclaw_sessions (id, agent_id, openclaw_session_id, channel, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [sessionId, id, openclawSessionId, APP_RUNTIME_CHANNEL, 'active', now, now]
+      `INSERT INTO openclaw_sessions (id, agent_id, workspace_id, openclaw_session_id, channel, status, session_type, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [sessionId, id, targetWorkspaceId, openclawSessionId, APP_RUNTIME_CHANNEL, 'active', 'persistent', now, now]
     );
 
     // Log event
@@ -130,10 +160,29 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     }
 
-    const existingSession = queryOne<OpenClawSession>(
-      'SELECT * FROM openclaw_sessions WHERE agent_id = ? AND status = ?',
-      [id, 'active']
-    );
+    const workspaceId = request.nextUrl.searchParams.get('workspace_id');
+    const existingSession = workspaceId
+      ? queryOne<OpenClawSession>(
+          `SELECT *
+           FROM openclaw_sessions
+           WHERE agent_id = ?
+             AND workspace_id = ?
+             AND session_type = 'persistent'
+             AND status = ?
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [id, workspaceId, 'active']
+        )
+      : queryOne<OpenClawSession>(
+          `SELECT *
+           FROM openclaw_sessions
+           WHERE agent_id = ?
+             AND session_type = 'persistent'
+             AND status = ?
+           ORDER BY created_at DESC
+           LIMIT 1`,
+          [id, 'active']
+        );
 
     if (!existingSession) {
       return NextResponse.json(

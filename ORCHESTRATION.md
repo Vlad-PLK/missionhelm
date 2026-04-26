@@ -1,6 +1,8 @@
 # La Citadel Orchestration Playbook
 
-This playbook defines how we operate La Citadel as a centralized and powerful AI operations citadel, with Hermès as orchestrator and OpenClaw as execution runtime.
+This playbook defines how the keep is operated: Hermès holds the command surface, OpenClaw carries execution, and La Citadel preserves the receipts that make every decision auditable.
+
+For coding tasks, the current dispatch path is single-pass Codex JSON execution. Do not model an old PLAN/BUILD split in operator guidance.
 
 ---
 
@@ -23,6 +25,7 @@ This playbook defines how we operate La Citadel as a centralized and powerful AI
 - Persists tasks/agents/workspaces/sessions/events
 - Broadcasts activity and status transitions
 - Provides API surfaces for auditability and recovery
+- Keeps execution history legible enough for replay, review, and reconciliation
 
 ---
 
@@ -138,4 +141,5 @@ Handle by reconciliation, not by status cosmetics.
 - Preserve operational visibility at every step
 - Keep changes minimal and reversible
 - Separate configured state from verified-running state
+- Keep dispatch guidance aligned with the live single-pass Codex flow
 - Never declare done from intent alone

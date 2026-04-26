@@ -1,16 +1,28 @@
 # La Citadel
 
-La Citadel is our Hermès-first centralized command platform for orchestrating AI delivery across projects, workspaces, and agents.
+```text
+                         /\
+                    /\  /  \  /\
+                   /  \/ /\ \/  \
+                  / /\  /  \  /\ \
+                 /_/  \/____\/  \_\
+                 |   LA CITADEL   |
+                 |  Hermès at the |
+                 |      gate      |
+                 |__[]__[]__[]____|
+```
 
-It is designed for one job: keep execution moving from intent to verified completion with full operational visibility.
+La Citadel is the command keep for Hermès-first operations: intent enters through one gate, execution rides out through OpenClaw, and every material movement is recorded until the work is verified.
 
-La Citadel positions the system as a single, powerful operations citadel: one control plane, one runtime truth, one place to command execution.
+It exists for one job: keep execution moving from intent to verified completion with full operational visibility and no status theater.
+
+For coding dispatches, La Citadel uses the current single-pass Codex JSON flow. There is no PLAN/BUILD split in the live operating model.
 
 ---
 
 ## What this repository is
 
-La Citadel combines:
+La Citadel combines three roles inside one operational keep:
 
 - Hermès (operator brain): intake, triage, dispatch, verification, recovery
 - La Citadel (control plane): dashboard + APIs + workflow enforcement
@@ -26,8 +38,9 @@ This repo is our canonical implementation for that process.
 1. Execution-first over planning theater
 2. Runtime truth over assumptions
 3. Receipts over claims
-4. Operator control with automated momentum
-5. Review gates before closure
+4. Single-pass execution over ceremonial handoff phases
+5. Operator control with automated momentum
+6. Review gates before closure
 
 ---
 
@@ -96,18 +109,21 @@ Note: `/api/health` may not exist in all deployments; do not use it as sole heal
 ### Setup
 
 ```bash
-git clone https://github.com/Vlad-PLK/laCitadel.git
-cd laCitadel
+git clone git@github.com:Vlad-PLK/laCitadel.git la-citadel
+cd la-citadel
 npm install
 cp .env.example .env.local
+npm run db:seed
 ```
 
 Set at minimum:
 
 ```env
-OPENCLAW_GATEWAY_URL=ws://127.0.0.1:18789
-OPENCLAW_GATEWAY_TOKEN=***
+LA_CITADEL_OPENCLAW_GATEWAY_URL=ws://127.0.0.1:18789
+LA_CITADEL_OPENCLAW_GATEWAY_TOKEN=***
 ```
+
+Legacy aliases such as `OPENCLAW_GATEWAY_URL` remain supported, but the `LA_CITADEL_*` names are the canonical contract.
 
 Run:
 
@@ -123,7 +139,7 @@ Open: `http://localhost:4000`
 
 ```bash
 npm run build
-npx next start -p 4000
+npm start
 ```
 
 For containerized deployment, use `docker-compose.yml` with persistent volume mounts for `/app/data` and `/app/workspace`.

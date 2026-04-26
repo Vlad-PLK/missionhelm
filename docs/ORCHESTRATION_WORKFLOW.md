@@ -1,6 +1,8 @@
 # Orchestration Workflow (API + Runtime)
 
-This document is the implementation-level workflow for operating La Citadel with Hermès and OpenClaw.
+This document is the implementation-level workflow for operating La Citadel with Hermès at the gate and OpenClaw in the field.
+
+For coding tasks, dispatch assumes the current single-pass Codex JSON flow. Do not document or expect a legacy PLAN/BUILD split here.
 
 ---
 
@@ -52,6 +54,7 @@ http://127.0.0.1:4000
 ### Step B — execute
 
 - dispatch pending actionable work,
+- for coding tasks, hand off through the single-pass Codex JSON path,
 - log activities as soon as work starts,
 - keep progress cadence visible,
 - escalate blockers fast.

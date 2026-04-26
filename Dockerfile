@@ -7,14 +7,14 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 FROM base AS prod-deps
 RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --legacy-peer-deps --omit=dev && npm cache clean --force
 
 FROM base AS builder
 COPY --from=build-deps /app/node_modules ./node_modules

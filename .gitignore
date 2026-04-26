@@ -67,3 +67,7 @@ docs/linkedin/
 
 # runtime/operator receipts and execution traces (may include internal IDs/endpoints)
 /receipts/
+
+# local codex scratch + manual backups
+.codex
+/backups/

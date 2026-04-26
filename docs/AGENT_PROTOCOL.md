@@ -1,12 +1,14 @@
 # Agent Protocol (Hermès + OpenClaw + La Citadel)
 
-This protocol defines how execution agents must report work so La Citadel remains auditable and actionable.
+This protocol defines how execution agents speak back to the keep so La Citadel remains auditable, actionable, and impossible to bluff.
+
+For coding tasks, the current execution path is single-pass Codex JSON flow. The reporting contract below still applies inside that single pass.
 
 ---
 
 ## 1) Why this exists
 
-Without structured reporting, tasks appear active but are operationally opaque.
+Without structured reporting, tasks may look active while the keep is blind.
 
 This protocol guarantees:
 
