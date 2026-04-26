@@ -1,5 +1,5 @@
 export const APP_DISPLAY_NAME = 'La Citadel';
-export const LEGACY_APP_DISPLAY_NAME = 'Mission Control';
+export const LEGACY_APP_DISPLAY_NAME = 'La Citadel';
 
 export const APP_SLUG = 'la-citadel';
 export const LEGACY_APP_SLUG = 'mission-control';

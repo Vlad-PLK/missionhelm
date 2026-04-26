@@ -2,7 +2,7 @@
  * File Download API
  * Returns file content over HTTP from the server filesystem.
  * This enables remote agents to read files from
- * the Mission Control server.
+ * the La Citadel server.
  */
 
 import { NextRequest, NextResponse } from 'next/server';

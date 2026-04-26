@@ -9,6 +9,6 @@ export async function GET() {
     message: process.env.DEMO_MODE === 'true'
       ? `This is a live demo of ${APP_DISPLAY_NAME}. All actions are simulated.`
       : undefined,
-    github: 'https://github.com/Vlad-PLK/missionhelm',
+    github: 'https://github.com/Vlad-PLK/laCitadel',
   });
 }

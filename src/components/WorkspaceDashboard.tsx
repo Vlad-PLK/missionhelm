@@ -1023,7 +1023,7 @@ function CreateWorkspaceModal({ onClose, onCreated }: { onClose: () => void; onC
               type="text"
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="Mission Control, Backoffice Relay, Cafe Fino"
+              placeholder="La Citadel, Backoffice Relay, Cafe Fino"
               className="w-full rounded-2xl border border-mc-border bg-mc-bg px-4 py-3 text-sm text-mc-text outline-none transition-colors focus:border-mc-accent"
               autoFocus
             />
