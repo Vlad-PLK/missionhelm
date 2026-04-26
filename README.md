@@ -93,6 +93,7 @@ Primary health and state surfaces:
 - `GET /api/workspaces?stats=true`
 - `GET /api/agents`
 - `GET /api/openclaw/status`
+- `GET /api/execution/monitor` (watchdog/ingestion cycle state)
 
 Note: `/api/health` may not exist in all deployments; do not use it as sole health signal.
 
